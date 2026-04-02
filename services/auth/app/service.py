@@ -56,6 +56,13 @@ class UserNotFoundError(AuthServiceError):
         super().__init__("User not found", "USER_NOT_FOUND")
 
 
+class InsufficientCreditsError(AuthServiceError):
+    """Raised when user does not have enough AI credits."""
+
+    def __init__(self) -> None:
+        super().__init__("Insufficient AI credits", "INSUFFICIENT_CREDITS")
+
+
 class AuthService:
     """Handles all authentication and user management operations."""
 
@@ -245,4 +252,43 @@ class AuthService:
             Current credits balance.
         """
         user = await self.get_user_by_id(user_id)
+        return user.ai_credits
+
+    async def deduct_credits(self, user_id: uuid.UUID, amount: int = 1) -> int:
+        """Deduct AI credits from a user's balance.
+
+        Args:
+            user_id: The user UUID.
+            amount: Number of credits to deduct.
+
+        Returns:
+            Remaining credits balance.
+
+        Raises:
+            InsufficientCreditsError: If user does not have enough credits.
+        """
+        user = await self.get_user_by_id(user_id)
+        if user.ai_credits < amount:
+            raise InsufficientCreditsError()
+        user.ai_credits -= amount
+        user.updated_at = datetime.now(UTC)
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user.ai_credits
+
+    async def add_credits(self, user_id: uuid.UUID, amount: int) -> int:
+        """Add AI credits to a user's balance.
+
+        Args:
+            user_id: The user UUID.
+            amount: Number of credits to add.
+
+        Returns:
+            New credits balance.
+        """
+        user = await self.get_user_by_id(user_id)
+        user.ai_credits += amount
+        user.updated_at = datetime.now(UTC)
+        await self.db.commit()
+        await self.db.refresh(user)
         return user.ai_credits
