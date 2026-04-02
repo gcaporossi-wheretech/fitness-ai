@@ -1,0 +1,65 @@
+name: fitness_ai
+description: "FitnessAI - AI-powered personal fitness coach"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^3.3.1
+
+  # Immutable models
+  freezed_annotation: ^2.4.4
+
+  # Local storage (offline-first)
+  hive_flutter: ^1.1.0
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # HTTP client
+  dio: ^5.7.0
+
+  # Secure storage for JWT tokens
+  flutter_secure_storage: ^9.2.4
+
+  # Charts
+  fl_chart: ^0.69.0
+
+  # Typography
+  google_fonts: ^6.2.1
+
+  # Date formatting
+  intl: ^0.20.2
+
+  # UUID generation
+  uuid: ^4.5.3
+
+  # JSON serialization
+  json_annotation: ^4.9.0
+
+  # Connectivity check
+  connectivity_plus: ^6.1.2
+
+  # Camera (for AI Vision)
+  camera: ^0.11.1
+
+  # Image picker (for AI Coach body photos)
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  freezed: ^2.5.7
+  build_runner: ^2.4.13
+  json_serializable: ^6.9.4
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
