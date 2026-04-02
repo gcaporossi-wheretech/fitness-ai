@@ -21,6 +21,7 @@ from app.schemas import (
 from app.service import (
     AuthService,
     EmailAlreadyExistsError,
+    InsufficientCreditsError,
     InvalidCredentialsError,
     InvalidRefreshTokenError,
 )
@@ -161,3 +162,30 @@ async def get_credits(current_user: User = Depends(get_current_user)) -> Credits
         Credits balance.
     """
     return CreditsResponse(credits=current_user.ai_credits)
+
+
+@router.post("/credits/deduct", response_model=CreditsResponse)
+async def deduct_credits(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CreditsResponse:
+    """Deduct one AI credit from the user's balance.
+
+    Used internally when an AI operation is performed.
+
+    Args:
+        current_user: Authenticated user from JWT.
+        db: Database session.
+
+    Returns:
+        Updated credits balance.
+    """
+    service = AuthService(db)
+    try:
+        remaining = await service.deduct_credits(current_user.id)
+    except InsufficientCreditsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=exc.message,
+        ) from exc
+    return CreditsResponse(credits=remaining)
