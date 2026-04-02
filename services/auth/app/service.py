@@ -1,21 +1,22 @@
 """Auth business logic: user registration, login, token management."""
+
 from __future__ import annotations
 
 import hashlib
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.models import RefreshToken, User
 from app.security import (
     create_access_token,
     create_refresh_token,
     hash_password,
     verify_password,
 )
-from app.models import RefreshToken, User
 
 
 class AuthServiceError(Exception):
@@ -61,7 +62,9 @@ class AuthService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def register(self, email: str, password: str, name: str | None, language: str) -> tuple[User, str, str]:
+    async def register(
+        self, email: str, password: str, name: str | None, language: str
+    ) -> tuple[User, str, str]:
         """Register a new user account.
 
         Args:
@@ -94,7 +97,8 @@ class AuthService:
         refresh_token_record = RefreshToken(
             user_id=user.id,
             token_hash=token_hash,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.jwt_refresh_expiry_days),
+            expires_at=datetime.now(UTC)
+            + timedelta(days=settings.jwt_refresh_expiry_days),
         )
         self.db.add(refresh_token_record)
         await self.db.commit()
@@ -115,7 +119,9 @@ class AuthService:
         Raises:
             InvalidCredentialsError: If email not found or password wrong.
         """
-        result = await self.db.execute(select(User).where(User.email == email, User.is_active == True))
+        result = await self.db.execute(
+            select(User).where(User.email == email, User.is_active == True)
+        )
         user = result.scalar_one_or_none()
         if not user or not verify_password(password, user.password_hash):
             raise InvalidCredentialsError()
@@ -125,7 +131,8 @@ class AuthService:
         refresh_token_record = RefreshToken(
             user_id=user.id,
             token_hash=token_hash,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.jwt_refresh_expiry_days),
+            expires_at=datetime.now(UTC)
+            + timedelta(days=settings.jwt_refresh_expiry_days),
         )
         self.db.add(refresh_token_record)
 
@@ -133,7 +140,7 @@ class AuthService:
         expired = await self.db.execute(
             select(RefreshToken).where(
                 RefreshToken.user_id == user.id,
-                RefreshToken.expires_at < datetime.now(timezone.utc),
+                RefreshToken.expires_at < datetime.now(UTC),
             )
         )
         for token in expired.scalars().all():
@@ -158,7 +165,7 @@ class AuthService:
         result = await self.db.execute(
             select(RefreshToken).where(
                 RefreshToken.token_hash == token_hash,
-                RefreshToken.expires_at > datetime.now(timezone.utc),
+                RefreshToken.expires_at > datetime.now(UTC),
             )
         )
         token_record = result.scalar_one_or_none()
@@ -180,7 +187,8 @@ class AuthService:
         new_token = RefreshToken(
             user_id=user.id,
             token_hash=new_hash,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.jwt_refresh_expiry_days),
+            expires_at=datetime.now(UTC)
+            + timedelta(days=settings.jwt_refresh_expiry_days),
         )
         self.db.add(new_token)
         await self.db.commit()
@@ -222,7 +230,7 @@ class AuthService:
         for key, value in kwargs.items():
             if value is not None and hasattr(user, key):
                 setattr(user, key, value)
-        user.updated_at = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(UTC)
         await self.db.commit()
         await self.db.refresh(user)
         return user

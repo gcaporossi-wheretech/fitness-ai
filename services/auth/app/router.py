@@ -1,12 +1,13 @@
 """Auth API router: registration, login, token refresh, profile management."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import User
 from app.dependencies import get_current_user
+from app.models import User
 from app.schemas import (
     AuthResponse,
     CreditsResponse,
@@ -28,7 +29,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
-async def register(request: UserRegisterRequest, db: AsyncSession = Depends(get_db)) -> AuthResponse:
+async def register(
+    request: UserRegisterRequest, db: AsyncSession = Depends(get_db)
+) -> AuthResponse:
     """Register a new user account.
 
     Args:
@@ -88,7 +91,9 @@ async def login(request: UserLoginRequest, db: AsyncSession = Depends(get_db)) -
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_tokens(request: TokenRefreshRequest, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+async def refresh_tokens(
+    request: TokenRefreshRequest, db: AsyncSession = Depends(get_db)
+) -> TokenResponse:
     """Exchange refresh token for new access + refresh tokens.
 
     Args:

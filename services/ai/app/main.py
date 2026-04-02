@@ -10,7 +10,8 @@ app = FastAPI(
     title="FitnessAI AI Service",
     description="Vision scan, Coach generation, and prompt engineering for FitnessAI",
     version=settings.app_version,
-    root_path="/ai",
+    docs_url="/ai/docs",
+    openapi_url="/ai/openapi.json",
 )
 
 # CORS middleware

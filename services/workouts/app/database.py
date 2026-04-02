@@ -1,4 +1,4 @@
-"""Database connection and session management using asyncpg."""
+"""Database connection and session management for workouts service."""
 
 from __future__ import annotations
 

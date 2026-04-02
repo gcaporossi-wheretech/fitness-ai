@@ -1,4 +1,5 @@
 """Auth service — Main application entry point."""
+
 from __future__ import annotations
 
 from fastapi import FastAPI
@@ -11,7 +12,8 @@ app = FastAPI(
     title="FitnessAI Auth Service",
     description="Authentication, user management, and credits for FitnessAI",
     version=settings.app_version,
-    root_path="/auth",
+    docs_url="/auth/docs",
+    openapi_url="/auth/openapi.json",
 )
 
 # CORS middleware

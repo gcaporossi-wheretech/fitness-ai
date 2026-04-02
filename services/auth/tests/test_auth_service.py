@@ -1,7 +1,6 @@
 """Unit tests for auth service business logic."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from app.security import create_access_token, decode_access_token, hash_password, verify_password
 

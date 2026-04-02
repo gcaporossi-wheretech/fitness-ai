@@ -1,16 +1,16 @@
 """FastAPI dependencies for auth: JWT verification, current user extraction."""
+
 from __future__ import annotations
 
 import uuid
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.security import decode_access_token
 from app.database import get_db
 from app.models import User
+from app.security import decode_access_token
 from app.service import AuthService, UserNotFoundError
 
 security_scheme = HTTPBearer()
