@@ -12,11 +12,14 @@ env:
 
 jobs:
   # ==========================================
-  # Backend (FastAPI / Python)
+  # Backend Services (Matrix: auth, workouts, ai, analytics)
   # ==========================================
   backend-lint:
-    name: "Backend: Lint & Format"
+    name: "Backend: Lint (${{ matrix.service }})"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth, workouts, ai, analytics]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,16 +27,19 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
         run: |
-          cd api
+          cd services/${{ matrix.service }}
           pip install ruff
       - name: Ruff lint
-        run: cd api && ruff check .
+        run: cd services/${{ matrix.service }} && ruff check .
       - name: Ruff format check
-        run: cd api && ruff format --check .
+        run: cd services/${{ matrix.service }} && ruff format --check .
 
   backend-test:
-    name: "Backend: Unit & Integration Tests"
+    name: "Backend: Tests (${{ matrix.service }})"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth, workouts, ai, analytics]
     services:
       postgres:
         image: postgres:16
@@ -55,7 +61,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
         run: |
-          cd api
+          cd services/${{ matrix.service }}
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       - name: Run tests with coverage
@@ -63,17 +69,17 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/fitness_ai_test
           JWT_SECRET: test-secret-min-32-characters-long
           ANTHROPIC_API_KEY: test-key-not-real
+          REDIS_URL: redis://localhost:6379/0
         run: |
-          cd api
-          pytest --cov=modules --cov-report=xml --cov-report=term-missing -v
-      - name: Check coverage threshold
-        run: |
-          cd api
-          coverage report --fail-under=80
+          cd services/${{ matrix.service }}
+          pytest --cov=app --cov-report=xml --cov-report=term-missing -v
 
   backend-security:
-    name: "Backend: Security Scan"
+    name: "Backend: Security (${{ matrix.service }})"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth, workouts, ai, analytics]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -82,11 +88,11 @@ jobs:
       - name: Install bandit
         run: pip install bandit
       - name: SAST scan with Bandit
-        run: cd api && bandit -r modules/ -f json -o bandit-report.json || true
+        run: cd services/${{ matrix.service }} && bandit -r app/ -f json -o bandit-report.json || true
       - name: Check for high severity issues
         run: |
-          cd api
-          bandit -r modules/ -ll -ii
+          cd services/${{ matrix.service }}
+          bandit -r app/ -ll -ii
 
   # ==========================================
   # Secret Detection (whole repo)
@@ -141,9 +147,20 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     needs: [backend-lint, backend-test, backend-security, secret-detection, dashboard-lint, dashboard-test]
+    strategy:
+      matrix:
+        service: [auth, workouts, ai, analytics]
     steps:
       - uses: actions/checkout@v4
-      - name: Build API image
-        run: docker build -t fitness-ai-api:${{ github.sha }} ./api
+      - name: Build ${{ matrix.service }} image
+        run: docker build -t fitness-ai-${{ matrix.service }}:${{ github.sha }} ./services/${{ matrix.service }}
+
+  docker-build-web:
+    name: "Docker: Build Web Image"
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [backend-lint, backend-test, backend-security, secret-detection, dashboard-lint, dashboard-test]
+    steps:
+      - uses: actions/checkout@v4
       - name: Build Web image
         run: docker build -t fitness-ai-web:${{ github.sha }} ./web

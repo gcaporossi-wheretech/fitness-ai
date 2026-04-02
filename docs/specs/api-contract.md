@@ -1,8 +1,14 @@
 # API Contract — FitnessAI Backend
 
 ## Base URL
-- Development: `http://localhost:8000/api/v1`
-- Production: `https://api.fitnessai.app/api/v1`
+- Development: `http://localhost` (Traefik gateway, path-based routing)
+- Production: `https://fitnessai.app` (Traefik gateway, path-based routing)
+
+All endpoints are routed by Traefik based on path prefix:
+- `/auth/*` -> auth service (port 8001)
+- `/workouts/*` -> workouts service (port 8002)
+- `/ai/*` -> ai service (port 8003)
+- `/analytics/*` -> analytics service (port 8004)
 
 ## Authentication
 All protected endpoints require header: `Authorization: Bearer <jwt_token>`
