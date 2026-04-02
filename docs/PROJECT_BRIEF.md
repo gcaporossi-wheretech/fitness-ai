@@ -34,9 +34,9 @@ Sviluppare un'app fitness commerciale con AI che permette di riconoscere macchin
 - Lingue oltre IT/EN
 
 ## Architettura
-**Modular Monolith ibrido**: backend FastAPI monolitico con 4 moduli interni (auth, workouts, ai, analytics), orchestrato con Docker Compose (4 container: nginx, api, web, db). Flutter app distribuita via store.
+**Microservizi con Docker Compose**: 4 servizi FastAPI indipendenti (auth, workouts, ai, analytics) + Traefik API Gateway + PostgreSQL (schema separati) + Redis (cache + job queue). Flutter app distribuita via store, Next.js dashboard.
 
-Motivazione: overhead microservizi sproporzionato per sviluppatore singolo su EC2 con Docker Compose. I confini modulari permettono estrazione futura in microservizi quando la scala lo richiede.
+Evoluzione da Modular Monolith (ADR-001) a microservizi (ADR-004) per scalabilita indipendente, deploy granulare, isolamento dei guasti, e job AI asincroni via Redis Streams.
 
 ## Stack tecnologico
 
@@ -47,7 +47,9 @@ Motivazione: overhead microservizi sproporzionato per sviluppatore singolo su EC
 | Dashboard | Next.js 14, TypeScript, Tailwind, shadcn/ui |
 | Database | PostgreSQL 16 (JSONB), Alembic migrazioni |
 | AI | Claude API (Anthropic) — Vision + Text |
-| Infra | Docker Compose, Nginx, Let's Encrypt, AWS EC2 |
+| API Gateway | Traefik v3 (routing, HTTPS, rate limiting) |
+| Cache/Queue | Redis 7 (AI cache + Redis Streams) |
+| Infra | Docker Compose, AWS EC2 |
 | CI/CD | GitHub Actions |
 
 ## Business model

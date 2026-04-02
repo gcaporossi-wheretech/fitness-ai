@@ -1,6 +1,155 @@
 version: "3.9"
 
 services:
+  # ==========================================
+  # API Gateway
+  # ==========================================
+  traefik:
+    image: traefik:v3.2
+    container_name: fitnessai-traefik
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Dashboard — remove in production
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./infra/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      # - letsencrypt:/letsencrypt  # Uncomment for production
+    networks:
+      - fitnessai
+    restart: unless-stopped
+
+  # ==========================================
+  # Auth Service
+  # ==========================================
+  auth:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile
+    container_name: fitnessai-auth
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-fitnessai}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-fitness_ai}
+      SERVICE_NAME: auth
+      SERVICE_PORT: "8001"
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=PathPrefix(`/auth`)"
+      - "traefik.http.routers.auth.entrypoints=web"
+      - "traefik.http.routers.auth.middlewares=security-headers@file,rate-limit-auth@file"
+      - "traefik.http.services.auth.loadbalancer.server.port=8001"
+    networks:
+      - fitnessai
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================
+  # Workouts Service
+  # ==========================================
+  workouts:
+    build:
+      context: ./services/workouts
+      dockerfile: Dockerfile
+    container_name: fitnessai-workouts
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-fitnessai}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-fitness_ai}
+      SERVICE_NAME: workouts
+      SERVICE_PORT: "8002"
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.workouts.rule=PathPrefix(`/workouts`)"
+      - "traefik.http.routers.workouts.entrypoints=web"
+      - "traefik.http.routers.workouts.middlewares=security-headers@file,rate-limit-global@file"
+      - "traefik.http.services.workouts.loadbalancer.server.port=8002"
+    networks:
+      - fitnessai
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================
+  # AI Service
+  # ==========================================
+  ai:
+    build:
+      context: ./services/ai
+      dockerfile: Dockerfile
+    container_name: fitnessai-ai
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-fitnessai}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-fitness_ai}
+      REDIS_URL: redis://redis:6379/0
+      SERVICE_NAME: ai
+      SERVICE_PORT: "8003"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ai.rule=PathPrefix(`/ai`)"
+      - "traefik.http.routers.ai.entrypoints=web"
+      - "traefik.http.routers.ai.middlewares=security-headers@file,rate-limit-ai@file,body-limit@file"
+      - "traefik.http.services.ai.loadbalancer.server.port=8003"
+    networks:
+      - fitnessai
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8003/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================
+  # Analytics Service
+  # ==========================================
+  analytics:
+    build:
+      context: ./services/analytics
+      dockerfile: Dockerfile
+    container_name: fitnessai-analytics
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-fitnessai}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-fitness_ai}
+      SERVICE_NAME: analytics
+      SERVICE_PORT: "8004"
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.analytics.rule=PathPrefix(`/analytics`)"
+      - "traefik.http.routers.analytics.entrypoints=web"
+      - "traefik.http.routers.analytics.middlewares=security-headers@file,rate-limit-global@file"
+      - "traefik.http.services.analytics.loadbalancer.server.port=8004"
+    networks:
+      - fitnessai
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8004/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ==========================================
+  # Database
+  # ==========================================
   db:
     image: postgres:16.4-alpine
     container_name: fitnessai-db
@@ -10,8 +159,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-fitness_ai}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    networks:
+      - fitnessai
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-fitnessai}"]
       interval: 10s
@@ -19,52 +168,51 @@ services:
       retries: 5
     restart: unless-stopped
 
-  api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    container_name: fitnessai-api
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://${DB_USER:-fitnessai}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-fitness_ai}
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
+  # ==========================================
+  # Redis (Cache + Message Queue)
+  # ==========================================
+  redis:
+    image: redis:7.4-alpine
+    container_name: fitnessai-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+    networks:
+      - fitnessai
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
+  # ==========================================
+  # Dashboard (Next.js)
+  # ==========================================
   web:
     build:
       context: ./web
       dockerfile: Dockerfile
     container_name: fitnessai-web
     environment:
-      API_URL: http://api:8000
-    ports:
-      - "3000:3000"
+      API_URL: http://traefik:80
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.web.entrypoints=web"
+      - "traefik.http.routers.web.priority=1"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
+    networks:
+      - fitnessai
     depends_on:
-      - api
+      - auth
     restart: unless-stopped
 
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: fitnessai-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
-    depends_on:
-      - api
-      - web
-    restart: unless-stopped
+networks:
+  fitnessai:
+    driver: bridge
 
 volumes:
   pgdata:
+  redisdata:
+  # letsencrypt:  # Uncomment for production

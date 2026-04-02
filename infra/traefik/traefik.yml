@@ -1,0 +1,44 @@
+# Traefik v3 static configuration
+api:
+  dashboard: true
+  insecure: true  # Dashboard on :8080 — disable in production
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: fitnessai
+
+# Let's Encrypt — uncomment for production
+# certificatesResolvers:
+#   letsencrypt:
+#     acme:
+#       email: admin@fitnessai.app
+#       storage: /letsencrypt/acme.json
+#       httpChallenge:
+#         entryPoint: web
+
+log:
+  level: INFO
+  format: json
+
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        X-Correlation-Id: keep

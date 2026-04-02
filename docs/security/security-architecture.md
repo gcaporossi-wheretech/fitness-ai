@@ -41,17 +41,23 @@
 ## Network security
 
 ```
-Internet -> Nginx (:443 HTTPS) -> api (:8000 HTTP interno)
-                                -> web (:3000 HTTP interno)
-         -> Nginx (:80) -> redirect a :443
+Internet -> Traefik (:443 HTTPS) -> auth (:8001 HTTP interno)
+                                 -> workouts (:8002 HTTP interno)
+                                 -> ai (:8003 HTTP interno)
+                                 -> analytics (:8004 HTTP interno)
+                                 -> web (:3000 HTTP interno)
+         -> Traefik (:80) -> redirect a :443
 
-db (:5432) -> accessibile SOLO da api (Docker network interno)
+db (:5432) -> accessibile SOLO dai servizi (Docker network interno)
+redis (:6379) -> accessibile SOLO dal servizio ai (Docker network interno)
 ```
 
-- TLS 1.2+ con Let's Encrypt (certbot auto-renewal)
+- TLS 1.2+ con Let's Encrypt (Traefik ACME auto-renewal)
 - Comunicazione tra container: rete Docker interna (non esposta)
 - PostgreSQL: bind su Docker network, no bind su 0.0.0.0
-- Nginx security headers: HSTS, X-Frame-Options DENY, CSP, X-Content-Type-Options nosniff
+- Redis: bind su Docker network, no bind su 0.0.0.0
+- Traefik security headers: HSTS, X-Frame-Options DENY, CSP, X-Content-Type-Options nosniff
+- Ogni servizio valida JWT autonomamente (shared secret) — nessuna comunicazione inter-servizio per auth
 
 ## Data protection
 
@@ -76,7 +82,7 @@ db (:5432) -> accessibile SOLO da api (Docker network interno)
 - Cancellazione: endpoint `DELETE /auth/me` elimina account e tutti i dati (CASCADE)
 - Consenso: registrazione richiede accettazione termini e privacy policy
 
-## Rate limiting (Nginx + applicativo)
+## Rate limiting (Traefik middleware + applicativo)
 
 | Endpoint | Limite | Motivazione |
 |----------|--------|-------------|

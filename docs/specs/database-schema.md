@@ -3,6 +3,12 @@
 ## Overview
 PostgreSQL 16 con estensione pgcrypto (gen_random_uuid). JSONB per dati flessibili (esercizi nelle sessioni, obiettivi utente, fasi della scheda).
 
+**Schema separation**: ogni microservizio ha il proprio schema PostgreSQL per isolamento logico dei dati. Un singolo database fisico per semplicita operativa.
+- `auth.*` — utenti, token, credenziali WebAuthn
+- `workouts.*` — piani, sessioni, esercizi
+- `ai.*` — scan vision, generazioni coach
+- `analytics.*` — viste materializzate (futuro)
+
 ## ER Diagram (testuale)
 
 ```

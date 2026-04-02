@@ -1,20 +1,30 @@
-# Skill: new-module
+# Skill: new-service
 
-Scaffolds a new backend module inside api/modules/ with the standard file structure. Use when the architecture requires a new functional module in the FastAPI backend.
+Scaffolds a new microservice inside services/ with the standard file structure. Use when the architecture requires a new independent service in the FitnessAI backend.
 
 ## Parameters
-- module_name: snake_case name of the module (e.g., "notifications")
+- service_name: snake_case name of the service (e.g., "notifications")
+- port: port number for the service (e.g., 8005)
 
 ## Steps
-1. Create directory `api/modules/<module_name>/`
-2. Create standard files:
-   - `__init__.py` with module docstring
-   - `router.py` with FastAPI APIRouter and prefix
-   - `models.py` with SQLAlchemy/asyncpg model stubs
+1. Create directory `services/<service_name>/`
+2. Create app/ directory with standard files:
+   - `__init__.py` with service docstring
+   - `main.py` with FastAPI app, health endpoint, CORS
+   - `config.py` with Pydantic Settings (database_url, jwt_secret, service_name, service_port)
+   - `router.py` with FastAPI APIRouter
    - `schemas.py` with Pydantic v2 request/response schemas
+   - `models.py` with SQLAlchemy models using service-specific schema
    - `service.py` with business logic class
-3. Create test directory `api/tests/test_<module_name>/`
-   - `test_service.py` with test class stub
-   - `test_router.py` with httpx AsyncClient test stub
-4. Register the router in `api/main.py`
-5. Update docs/architecture/modules.md with new module entry
+   - `dependencies.py` with JWT validation
+   - `database.py` with engine and session factory
+3. Create `Dockerfile` (multi-stage build, non-root user, healthcheck)
+4. Create `requirements.txt` and `requirements-dev.txt`
+5. Create `pyproject.toml` with ruff, pytest, coverage config
+6. Create `.env.example`
+7. Create `README.md`
+8. Create `tests/` directory with `__init__.py` and `conftest.py`
+9. Add service to `docker-compose.yml` with Traefik labels
+10. Add service to CI pipeline matrix in `.github/workflows/ci.yml`
+11. Update `docs/architecture/services.md` with new service entry
+12. Update `docs/architecture/overview.md` container table

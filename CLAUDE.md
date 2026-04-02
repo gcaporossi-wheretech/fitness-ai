@@ -3,27 +3,32 @@
 ## Progetto
 App fitness commerciale con AI: riconoscimento macchinari da foto, schede personalizzate da analisi corporea, workout tracking completo. Target: 25-60 anni, palestre commerciali. Business model freemium con crediti AI.
 
-## Architettura: Modular Monolith ibrido
+## Architettura: Microservizi con Docker Compose
 
-| Container | Tecnologia | Responsabilita |
-|-----------|-----------|----------------|
-| `nginx` | Nginx | Reverse proxy, HTTPS, rate limiting |
-| `api` | FastAPI (Python 3.12) | Backend monolitico con 4 moduli |
-| `web` | Next.js 14 | Dashboard utente |
-| `db` | PostgreSQL 16 | Persistenza, JSONB per dati flessibili |
-| `app` | Flutter 3.32+ | Mobile nativa (iOS + Android) — non in Docker |
+| Container | Tecnologia | Porta | Responsabilita |
+|-----------|-----------|-------|----------------|
+| `traefik` | Traefik v3 | 80, 443 | API Gateway — routing path-based, HTTPS, rate limiting |
+| `auth` | FastAPI | 8001 | Registrazione, login, JWT, WebAuthn, profilo, crediti |
+| `workouts` | FastAPI | 8002 | CRUD schede/sessioni, sync offline, esercizi |
+| `ai` | FastAPI | 8003 | Vision scan, Coach generation, caching Redis |
+| `analytics` | FastAPI | 8004 | Progressione, volume, aderenza, report |
+| `db` | PostgreSQL 16 | 5432 | Database condiviso (schema separati per servizio) |
+| `redis` | Redis 7 | 6379 | Cache AI + message queue (Redis Streams) |
+| `web` | Next.js 14 | 3000 | Dashboard utente |
+| `app` | Flutter 3.32+ | — | Mobile nativa (iOS + Android) — non in Docker |
 
-### Moduli backend (`api/modules/`)
-- **auth**: registrazione, login, JWT, WebAuthn
-- **workouts**: CRUD schede/sessioni/esercizi, sync offline
-- **ai**: proxy Claude API, prompt engineering, caching
-- **analytics**: statistiche, progressione, grafici
+### Comunicazione
+- Client -> Traefik -> servizi (HTTP sincrono, path-based routing)
+- AI jobs: asincroni via Redis Streams (client riceve job_id, polls per risultato)
+- Servizi validano JWT autonomamente (shared secret)
+- Database: schema separati, analytics ha read-only cross-schema
 
 ## Stack e convenzioni
-- **Python**: 3.12+, async, type hints obbligatori, Pydantic v2 per modelli
+- **Python**: 3.12+, async, type hints obbligatori, Pydantic v2
+- **Ogni servizio**: `services/<nome>/` con app/, tests/, Dockerfile, requirements.txt
 - **Flutter**: Dart 3.8+, Riverpod 3.x, Hive, freezed, clean architecture
 - **Next.js**: App Router, TypeScript strict, Tailwind + shadcn/ui
-- **Database**: Alembic per migrazioni, JSONB per dati flessibili
+- **Database**: Alembic migrazioni, schema separati per servizio
 - **Naming**: snake_case (Python), camelCase (Dart/TS), kebab-case (file/route)
 
 ## Strumenti progetto
@@ -31,7 +36,7 @@ App fitness commerciale con AI: riconoscimento macchinari da foto, schede person
 - **Issues/Board**: GitHub Issues + GitHub Projects
 - **Docs**: `docs/` in questo repo
 - **Prototipo**: https://github.com/gcaporossi-wheretech/gym-tracker-app
-- **CI/CD**: GitHub Actions
+- **CI/CD**: GitHub Actions (matrix build per servizio)
 
 ## Workflow
 - Branch: `main` (produzione) <- `develop` <- `feature/NNN-descrizione`
@@ -41,10 +46,10 @@ App fitness commerciale con AI: riconoscimento macchinari da foto, schede person
 
 ## Cosa NON fare
 1. NON usare Kubernetes — Docker Compose su EC2
-2. NON creare microservizi separati — moduli interni a FastAPI
+2. NON creare FK fisiche tra schema di servizi diversi — usare user_id da JWT
 3. NON usare ORM pesanti — SQLAlchemy Core o query dirette con asyncpg
 4. NON hardcodare secrets — sempre env vars / .env (mai committato)
-5. NON bypassare i test — ogni modulo ha i propri test obbligatori
+5. NON bypassare i test — ogni servizio ha i propri test obbligatori
 
 ## Context Recovery (inizio sessione)
 1. Leggi questo file e `.claude/` per regole e skill
@@ -54,4 +59,4 @@ App fitness commerciale con AI: riconoscimento macchinari da foto, schede person
 5. Riprendi il task in corso o identifica il prossimo
 
 ## Compaction Instructions
-Preserva: architettura (4 container + 4 moduli), task corrente (numero issue + stato), decisioni recenti, file modificati nella sessione, prossimi passi.
+Preserva: architettura (7 container + 4 servizi), task corrente (numero issue + stato), decisioni recenti, file modificati nella sessione, prossimi passi.

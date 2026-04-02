@@ -1,0 +1,67 @@
+# Traefik v3 dynamic configuration — middlewares and TLS
+
+http:
+  middlewares:
+    # Rate limiting — global
+    rate-limit-global:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1m
+
+    # Rate limiting — auth endpoints (stricter)
+    rate-limit-auth:
+      rateLimit:
+        average: 5
+        burst: 3
+        period: 1m
+
+    # Rate limiting — AI endpoints (expensive)
+    rate-limit-ai:
+      rateLimit:
+        average: 10
+        burst: 5
+        period: 1h
+
+    # Security headers
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Powered-By: ""
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+
+    # CORS middleware
+    cors:
+      headers:
+        accessControlAllowOriginList:
+          - "http://localhost:3000"
+          - "http://localhost:8080"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Authorization
+          - Content-Type
+          - X-Correlation-Id
+        accessControlMaxAge: 3600
+
+    # Request size limit (10MB for photo uploads)
+    body-limit:
+      buffering:
+        maxRequestBodyBytes: 10485760
+
+# TLS configuration — uncomment for production
+# tls:
+#   options:
+#     default:
+#       minVersion: VersionTLS12

@@ -18,35 +18,39 @@
 +------------------+ API    +--------+---------+
                                      |
                             +--------+---------+
-                            |                  |
-                    +-------v------+   +-------v------+
-                    | PostgreSQL   |   | Claude API   |
-                    | Database     |   | (Anthropic)  |
-                    +--------------+   +--------------+
+                            |        |         |
+                    +-------v-+  +---v------+  +---v-------+
+                    |PostgreSQL|  |  Redis   |  |Claude API |
+                    |Database  |  |Cache/MQ  |  |(Anthropic)|
+                    +----------+  +----------+  +-----------+
 ```
 
 ## Diagramma C4 Container
 
 ```
-                    +------------------------------------------+
-                    |           AWS EC2 (Docker Compose)        |
-                    |                                          |
-  Mobile App       |  +--------+    +---------+               |
-  (Flutter)  ----->|  | Nginx  |--->| FastAPI |               |
-                   |  | :443   |    | :8000   |               |
-  Dashboard  ----->|  |        |--->+---------+               |
-  (browser)        |  |        |    | modules:|               |
-                   |  |        |    | - auth  |               |
-                   |  +--------+    | - work  |   +--------+  |
-                   |    |           | - ai    |-->| Postgre|  |
-                   |    |           | - analy |   | SQL    |  |
-                   |    |           +---------+   | :5432  |  |
-                   |    |                         +--------+  |
-                   |    +---------->+---------+               |
-                   |                | Next.js |               |
-                   |                | :3000   |               |
-                   |                +---------+               |
-                   +------------------------------------------+
+                    +-----------------------------------------------------------+
+                    |              AWS EC2 (Docker Compose)                      |
+                    |                                                           |
+  Mobile App       |  +-----------+                                            |
+  (Flutter)  ----->|  | Traefik   |--- /auth/* ------> +----------+            |
+                   |  | :80/:443  |                    | Auth     |            |
+  Dashboard  ----->|  | API GW    |--- /workouts/* --> | :8001    |            |
+  (browser)        |  |           |                    +----------+            |
+                   |  |           |--- /ai/* --------> +----------+            |
+                   |  |           |                    | Workouts |            |
+                   |  |           |--- /analytics/* -> | :8002    |            |
+                   |  |           |                    +----------+            |
+                   |  |           |--- /* -----------> +----------+  +------+  |
+                   |  +-----------+                    | AI       |->| Redis|  |
+                   |                                   | :8003    |  | :6379|  |
+                   |                    +----------+   +----------+  +------+  |
+                   |                    | Next.js  |   +----------+            |
+                   |                    | :3000    |   | Analytics|            |
+                   |                    +----------+   | :8004    |  +------+  |
+                   |                                   +----------+->|Postgr|  |
+                   |                                                 |SQL   |  |
+                   |                                                 |:5432 |  |
+                   +-----------------------------------------------------------+
                                       |
                                       v
                               +---------------+
@@ -59,36 +63,53 @@
 
 | Container | Tecnologia | Porta | Responsabilita |
 |-----------|-----------|-------|----------------|
-| **nginx** | Nginx 1.25 | 80, 443 | Reverse proxy, TLS termination, rate limiting, security headers, static files |
-| **api** | FastAPI (Python 3.12) | 8000 | Backend API monolitico modulare — tutta la business logic |
-| **web** | Next.js 14 | 3000 | Dashboard utente — visualizzazione dati, grafici, profilo |
-| **db** | PostgreSQL 16 | 5432 | Database relazionale con JSONB per dati flessibili |
+| **traefik** | Traefik v3 | 80, 443 | API Gateway: routing path-based, HTTPS Let's Encrypt, rate limiting, security headers, auto-discovery Docker labels |
+| **auth** | FastAPI (Python 3.12) | 8001 | Registrazione, login, JWT, WebAuthn, profilo, crediti AI |
+| **workouts** | FastAPI (Python 3.12) | 8002 | CRUD schede/sessioni, sync offline, database esercizi |
+| **ai** | FastAPI (Python 3.12) | 8003 | Vision scan, Coach generation, prompt engineering, caching Redis |
+| **analytics** | FastAPI (Python 3.12) | 8004 | Progressione, volume, aderenza, report |
+| **db** | PostgreSQL 16 | 5432 | Database condiviso con schema separati per servizio |
+| **redis** | Redis 7 | 6379 | Cache AI (hash foto -> risultati) + message queue (Redis Streams per job AI asincroni) |
+| **web** | Next.js 14 | 3000 | Dashboard utente |
 | **app** | Flutter 3.32+ | — | Mobile app nativa (non in Docker, distribuita via store) |
 
-## Moduli backend (api/modules/)
-
-| Modulo | Responsabilita | Dipendenze interne | Dipendenze esterne |
-|--------|---------------|--------------------|--------------------|
-| **auth** | Registrazione, login, JWT, WebAuthn, profilo utente | — | bcrypt, PyJWT |
-| **workouts** | CRUD schede, sessioni, esercizi, sync offline | auth (user_id) | — |
-| **ai** | Riconoscimento macchinari, generazione schede, caching | auth (user_id, credits), workouts (exercise data) | Claude API |
-| **analytics** | Statistiche, progressione carichi, aderenza | auth (user_id), workouts (session data) | — |
-
-## Comunicazione
+## Comunicazione tra servizi
 
 | Da | A | Pattern | Protocollo |
 |----|---|---------|-----------|
-| Flutter app | api | Sincrono | HTTPS REST (JSON) |
-| Dashboard web | api | Sincrono | HTTPS REST (JSON) |
-| api (ai module) | Claude API | Sincrono | HTTPS REST |
-| api (tutti) | db | Sincrono | TCP (asyncpg) |
-| Moduli interni | Moduli interni | Chiamata diretta | Import Python (no HTTP) |
+| Flutter app | Traefik | Sincrono | HTTPS REST (JSON) |
+| Dashboard web | Traefik | Sincrono | HTTPS REST (JSON) |
+| Traefik | auth/workouts/ai/analytics | Sincrono | HTTP REST (Docker network interno) |
+| ai service | Claude API | Sincrono | HTTPS REST |
+| ai service | Redis | Sincrono + Async | Redis Streams per job asincroni, GET/SET per cache |
+| Tutti i servizi | db | Sincrono | TCP (asyncpg) |
 
-## Decisione: perche NON microservizi
+## Routing Traefik (path-based)
 
-Per sviluppatore singolo su EC2 con Docker Compose:
-- Overhead operativo sproporzionato (N pipeline, N Dockerfile, service discovery)
-- Debugging distribuito complesso senza team
-- Docker Compose non supporta service mesh / sidecar pattern
-- I moduli interni hanno gli stessi confini logici dei microservizi ma senza overhead di rete
-- Estrazione futura possibile: ogni modulo ha interface chiare
+| Path prefix | Servizio destinazione | Rate limit |
+|-------------|----------------------|------------|
+| `/auth/*` | auth:8001 | 5/min (login/register), standard per il resto |
+| `/workouts/*` | workouts:8002 | 100/min globale |
+| `/ai/*` | ai:8003 | 10/ora (vision), 3/giorno (coach) |
+| `/analytics/*` | analytics:8004 | 100/min globale |
+| `/*` (fallback) | web:3000 | Standard |
+
+## Database: schema separati
+
+Ogni servizio ha il proprio schema PostgreSQL per isolamento logico:
+- `auth.*` — users, refresh_tokens, webauthn_credentials
+- `workouts.*` — workout_plans, workout_sessions, exercises
+- `ai.*` — ai_vision_scans, ai_coach_generations
+- `analytics.*` — viste materializzate e tabelle di aggregazione
+
+Questo permette ownership chiara dei dati mantenendo un singolo database fisico per semplicita operativa.
+
+## Perche microservizi (evoluzione da modular monolith)
+
+Vedi [ADR-004: Microservices Architecture](../adr/004-microservices-architecture.md) per la decisione completa.
+
+Motivazioni principali:
+- Scalabilita indipendente: il servizio AI ha requisiti diversi (GPU future, burst)
+- Deploy indipendente: fix di auth non richiede rebuild di AI
+- Isolamento dei guasti: crash del servizio analytics non impatta auth
+- Redis per job asincroni: i job AI lunghi richiedono una coda, non sync HTTP

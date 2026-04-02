@@ -1,7 +1,7 @@
 # ADR-001: Modular Monolith invece di Microservizi
 
 ## Stato
-Accettata
+Superata — sostituita da [ADR-004: Microservices Architecture](004-microservices-architecture.md)
 
 ## Contesto
 Il progetto FitnessAI ha 4 domini funzionali chiari (auth, workouts, ai, analytics) che potrebbero essere implementati come microservizi separati. Tuttavia, il progetto ha un singolo sviluppatore, infrastruttura limitata (AWS EC2 con Docker Compose), e obiettivo time-to-market di 4-5 mesi.
