@@ -1,10 +1,12 @@
 """Analytics service — Main application entry point."""
+
 from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.router import router as analytics_router
 
 app = FastAPI(
     title="FitnessAI Analytics Service",
@@ -13,6 +15,9 @@ app = FastAPI(
     docs_url="/analytics/docs",
     openapi_url="/analytics/openapi.json",
 )
+
+# Register router
+app.include_router(analytics_router)
 
 # CORS middleware
 origins = [o.strip() for o in settings.cors_origins.split(",")]
