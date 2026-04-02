@@ -1,25 +1,40 @@
 """Security utilities: JWT token creation/verification, password hashing."""
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
-
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt with cost factor 12."""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt with cost factor 12.
+
+    Args:
+        password: Plain text password.
+
+    Returns:
+        Bcrypt hash string.
+    """
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its bcrypt hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against its bcrypt hash.
+
+    Args:
+        plain_password: Plain text password to check.
+        hashed_password: Bcrypt hash to verify against.
+
+    Returns:
+        True if password matches hash.
+    """
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 
 def create_access_token(user_id: str) -> str:
@@ -31,11 +46,11 @@ def create_access_token(user_id: str) -> str:
     Returns:
         Encoded JWT string.
     """
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_access_expiry_minutes)
+    expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_access_expiry_minutes)
     payload = {
         "sub": user_id,
         "exp": expire,
-        "iat": datetime.now(timezone.utc),
+        "iat": datetime.now(UTC),
         "type": "access",
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

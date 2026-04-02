@@ -1,4 +1,5 @@
 """Pydantic v2 schemas for auth service request/response validation."""
+
 from __future__ import annotations
 
 import uuid

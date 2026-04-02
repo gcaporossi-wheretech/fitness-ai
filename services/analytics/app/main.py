@@ -10,7 +10,8 @@ app = FastAPI(
     title="FitnessAI Analytics Service",
     description="Progression tracking, volume analytics, and adherence reports for FitnessAI",
     version=settings.app_version,
-    root_path="/analytics",
+    docs_url="/analytics/docs",
+    openapi_url="/analytics/openapi.json",
 )
 
 # CORS middleware
