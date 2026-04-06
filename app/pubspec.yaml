@@ -54,6 +54,10 @@ dependencies:
   # Image picker (for AI Coach body photos)
   image_picker: ^1.1.2
 
+  # Data export: file writing and sharing
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
