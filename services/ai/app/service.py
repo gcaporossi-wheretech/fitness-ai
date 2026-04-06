@@ -14,7 +14,11 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.claude_client import ClaudeAPIError, analyze_equipment_image
+from app.claude_client import (
+    ClaudeAPIError,
+    analyze_equipment_image,
+    generate_workout_plan,
+)
 from app.models import AICoachGeneration, AIVisionScan
 from app.redis_client import (
     cache_vision_result,
@@ -185,6 +189,66 @@ async def process_vision_scan(
 
     result["cached"] = False
     result["scan_id"] = str(scan.id)
+    return result
+
+
+async def process_coach_generate(
+    photos_data: list[tuple[bytes, str]],
+    user_data: dict,
+    user_id: str,
+    token: str,
+    db: AsyncSession,
+) -> dict[str, Any]:
+    """Process a coach generation: call Claude API, save to DB.
+
+    Args:
+        photos_data: List of (image_bytes, content_type) tuples.
+        user_data: User profile data (age, goals, limitations, etc.).
+        user_id: User UUID string.
+        token: JWT token for credit deduction.
+        db: Database session.
+
+    Returns:
+        Generated workout plan result dict.
+
+    Raises:
+        InsufficientCreditsError: If user lacks credits.
+        AIServiceError: If processing fails.
+    """
+    # Deduct credits before calling API
+    await _deduct_credits(user_id, COACH_GENERATE_CREDITS, token)
+
+    # Call Claude API
+    try:
+        result = await generate_workout_plan(photos_data, user_data)
+    except ClaudeAPIError as exc:
+        # Save failed generation to DB
+        generation = AICoachGeneration(
+            user_id=uuid.UUID(user_id),
+            input_data=user_data,
+            photo_count=len(photos_data),
+            credits_used=COACH_GENERATE_CREDITS,
+            error=str(exc),
+        )
+        db.add(generation)
+        await db.commit()
+        raise AIServiceError(
+            f"Coach generation failed: {exc.message}"
+        ) from exc
+
+    # Save to DB
+    generation = AICoachGeneration(
+        user_id=uuid.UUID(user_id),
+        input_data=user_data,
+        photo_count=len(photos_data),
+        generated_plan=result,
+        raw_response=result,
+        credits_used=COACH_GENERATE_CREDITS,
+    )
+    db.add(generation)
+    await db.commit()
+
+    result["generation_id"] = str(generation.id)
     return result
 
 
