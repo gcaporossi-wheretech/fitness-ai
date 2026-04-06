@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -47,7 +47,9 @@ def _mock_db_with_results(*results):
     for result_data in results:
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = result_data
-        mock_result.scalar_one.return_value = len(result_data) if isinstance(result_data, list) else result_data
+        mock_result.scalar_one.return_value = (
+            len(result_data) if isinstance(result_data, list) else result_data
+        )
         execute_results.append(mock_result)
     db.execute = AsyncMock(side_effect=execute_results)
     return db
