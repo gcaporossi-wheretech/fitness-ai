@@ -77,3 +77,30 @@ async def client(test_db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+async def register_and_get_token(client: AsyncClient) -> dict:
+    """Helper: register a user and return auth headers.
+
+    Returns:
+        Dict with Authorization header ready to use.
+    """
+    import uuid
+
+    email = f"test-{uuid.uuid4().hex[:8]}@example.com"
+    resp = await client.post(
+        "/auth/register",
+        json={
+            "email": email,
+            "password": "TestPass123",
+            "name": "Test User",
+        },
+    )
+    assert resp.status_code == 201
+    token = resp.json()["tokens"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+# Aliases used by WebAuthn tests
+create_test_user = register_and_get_token
+get_auth_headers = register_and_get_token

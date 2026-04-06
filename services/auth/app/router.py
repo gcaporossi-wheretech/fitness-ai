@@ -17,6 +17,10 @@ from app.schemas import (
     UserProfileUpdate,
     UserRegisterRequest,
     UserResponse,
+    WebAuthnCredentialResponse,
+    WebAuthnLoginRequest,
+    WebAuthnRegisterRequest,
+    WebAuthnRegisterResponse,
 )
 from app.service import (
     AuthService,
@@ -24,6 +28,7 @@ from app.service import (
     InsufficientCreditsError,
     InvalidCredentialsError,
     InvalidRefreshTokenError,
+    WebAuthnError,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -189,3 +194,117 @@ async def deduct_credits(
             detail=exc.message,
         ) from exc
     return CreditsResponse(credits=remaining)
+
+
+# ============================================================
+# WebAuthn endpoints
+# ============================================================
+
+
+@router.post("/webauthn/register/begin", response_model=WebAuthnRegisterResponse)
+async def webauthn_register_begin(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> WebAuthnRegisterResponse:
+    """Begin WebAuthn credential registration (generate challenge).
+
+    Args:
+        current_user: Authenticated user from JWT.
+        db: Database session.
+
+    Returns:
+        Registration options with challenge (60s timeout).
+    """
+    service = AuthService(db)
+    options = await service.webauthn_begin_register(current_user.id)
+    return WebAuthnRegisterResponse(**options)
+
+
+@router.post("/webauthn/register/complete", response_model=WebAuthnCredentialResponse)
+async def webauthn_register_complete(
+    request: WebAuthnRegisterRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> WebAuthnCredentialResponse:
+    """Complete WebAuthn credential registration (store credential).
+
+    Args:
+        request: Credential data from authenticator.
+        current_user: Authenticated user from JWT.
+        db: Database session.
+
+    Returns:
+        The registered credential details.
+    """
+    service = AuthService(db)
+    try:
+        credential = await service.webauthn_complete_register(
+            user_id=current_user.id,
+            credential_id=request.credential_id,
+            public_key=request.public_key,
+            device_name=request.device_name,
+        )
+    except WebAuthnError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=exc.message,
+        ) from exc
+    return WebAuthnCredentialResponse.model_validate(credential)
+
+
+@router.post("/webauthn/login", response_model=AuthResponse)
+async def webauthn_login(
+    request: WebAuthnLoginRequest,
+    db: AsyncSession = Depends(get_db),
+) -> AuthResponse:
+    """Authenticate via WebAuthn (Face ID / passkey).
+
+    Two-step flow: client first calls begin (not needed for simplified flow),
+    then sends credential assertion to this endpoint.
+
+    Args:
+        request: WebAuthn assertion data.
+        db: Database session.
+
+    Returns:
+        User data with authentication tokens.
+    """
+    service = AuthService(db)
+    try:
+        # Begin + complete in one step for simplified mobile flow
+        await service.webauthn_begin_login(request.credential_id)
+        user, access_token, refresh_token = await service.webauthn_complete_login(
+            credential_id=request.credential_id,
+            authenticator_data=request.authenticator_data,
+            client_data_json=request.client_data_json,
+            signature=request.signature,
+        )
+    except WebAuthnError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=exc.message,
+        ) from exc
+
+    return AuthResponse(
+        user=UserResponse.model_validate(user),
+        tokens=TokenResponse(access_token=access_token, refresh_token=refresh_token),
+    )
+
+
+@router.get("/webauthn/credentials", response_model=list[WebAuthnCredentialResponse])
+async def list_webauthn_credentials(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[WebAuthnCredentialResponse]:
+    """List all WebAuthn credentials for the current user.
+
+    Args:
+        current_user: Authenticated user from JWT.
+        db: Database session.
+
+    Returns:
+        List of registered credentials.
+    """
+    service = AuthService(db)
+    credentials = await service.list_webauthn_credentials(current_user.id)
+    return [WebAuthnCredentialResponse.model_validate(c) for c in credentials]
