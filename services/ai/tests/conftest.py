@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import fakeredis.aioredis
 import pytest
@@ -54,18 +54,70 @@ def auth_headers(test_user_id: str) -> dict:
 
 
 @pytest.fixture
+def auth_token(test_user_id: str) -> str:
+    """Return a valid JWT token for testing."""
+    return create_test_token(test_user_id)
+
+
+@pytest.fixture
 def fake_redis():
     """Create a fakeredis instance for testing."""
     return fakeredis.aioredis.FakeRedis(decode_responses=True)
 
 
+@pytest.fixture
+def mock_db():
+    """Create a mock database session."""
+    db = AsyncMock()
+    db.add = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock()
+    return db
+
+
+@pytest.fixture
+def mock_claude_vision_response():
+    """Standard mock response for vision scan."""
+    return {
+        "equipment_name": "Bench Press",
+        "brand": "Technogym",
+        "confidence": 0.95,
+        "exercises": [
+            {
+                "name": "Flat Bench Press",
+                "name_it": "Panca Piana",
+                "muscle_groups": ["chest", "triceps", "anterior deltoid"],
+                "difficulty": "intermediate",
+                "description": "Press the barbell upward from chest level.",
+            },
+            {
+                "name": "Close-Grip Bench Press",
+                "name_it": "Panca Presa Stretta",
+                "muscle_groups": ["triceps", "chest"],
+                "difficulty": "intermediate",
+                "description": "Narrow grip bench press targeting triceps.",
+            },
+        ],
+    }
+
+
 @pytest_asyncio.fixture
 async def client(fake_redis) -> AsyncGenerator[AsyncClient, None]:
-    """Create a test HTTP client with Redis mocked."""
-    with patch("app.redis_client.get_redis", return_value=fake_redis):
-        with patch(
-            "app.router.get_cached_vision_result", new_callable=AsyncMock, return_value=None
-        ):
-            transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as ac:
-                yield ac
+    """Create a test HTTP client with Redis and DB mocked."""
+    mock_db_session = AsyncMock()
+    mock_db_session.add = MagicMock()
+    mock_db_session.commit = AsyncMock()
+
+    async def mock_get_db():
+        yield mock_db_session
+
+    with (
+        patch("app.redis_client.get_redis", return_value=fake_redis),
+        patch("app.rate_limiter.get_redis", return_value=fake_redis),
+        patch("app.database.get_db", mock_get_db),
+        patch("app.router.get_db", mock_get_db),
+    ):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac

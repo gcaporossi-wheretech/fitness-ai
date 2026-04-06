@@ -1,107 +1,188 @@
-"""AI API router: vision scan, coach generation, job status."""
+"""AI API router: vision scan, coach generation, job status, history."""
 
 from __future__ import annotations
 
+import logging
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import get_db
 from app.dependencies import get_current_user_id
+from app.rate_limiter import (
+    RateLimitExceededError,
+    check_vision_scan_rate,
+)
 from app.redis_client import (
-    compute_image_hash,
-    get_cached_vision_result,
     get_job_status,
-    publish_job,
 )
 from app.schemas import (
-    CoachGenerateResponse,
     JobStatusResponse,
-    VisionScanResponse,
+    PaginatedCoachHistory,
+    PaginatedVisionHistory,
+    VisionScanSyncResponse,
+)
+from app.service import (
+    AIServiceError,
+    InsufficientCreditsError,
+    get_coach_history,
+    get_vision_history,
+    process_vision_scan,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/ai", tags=["ai"])
+security_scheme = HTTPBearer()
 
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
+ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png"}
 
 
-@router.post("/vision/scan", response_model=VisionScanResponse)
+def _get_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+) -> str:
+    """Extract raw JWT token string from authorization header.
+
+    Args:
+        credentials: Bearer token from Authorization header.
+
+    Returns:
+        Raw JWT token string.
+    """
+    return credentials.credentials
+
+
+@router.post("/vision/scan", response_model=VisionScanSyncResponse)
 async def vision_scan(
     image: UploadFile = File(...),
     user_id: uuid.UUID = Depends(get_current_user_id),
-) -> VisionScanResponse:
+    token: str = Depends(_get_token),
+    db: AsyncSession = Depends(get_db),
+) -> VisionScanSyncResponse:
     """Submit an image for AI equipment recognition.
 
-    The image is hashed for dedup caching. If a cached result exists,
-    it is returned immediately. Otherwise, a job is published to Redis
-    Streams for async processing.
+    The image is processed in memory and sent to Claude Vision API.
+    Results are cached by image hash (SHA256) for dedup.
+    Costs 1 AI credit per scan (free if cached).
+
+    Rate limit: 10 scans per hour.
 
     Args:
-        image: Uploaded image file (max 10MB).
+        image: Uploaded image file (JPEG/PNG, max 10MB).
         user_id: Authenticated user UUID from JWT.
+        token: Raw JWT token for inter-service calls.
+        db: Database session.
 
     Returns:
-        Job submission response with job_id for polling.
+        Equipment recognition result with exercises.
     """
-    # Validate file size
+    # Validate content type
+    if image.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid image type: {image.content_type}. Allowed: JPEG, PNG.",
+        )
+
+    # Read and validate size
     contents = await image.read()
     if len(contents) > MAX_IMAGE_SIZE:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail=f"Image exceeds maximum size of {MAX_IMAGE_SIZE // (1024 * 1024)}MB",
         )
 
-    # Check cache
-    image_hash = compute_image_hash(contents)
-    cached = await get_cached_vision_result(image_hash)
-    if cached:
-        # Return cached result as a completed job
-        job_id = await publish_job(
-            job_type="vision_scan",
+    if len(contents) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Empty image file",
+        )
+
+    # Check rate limit
+    try:
+        await check_vision_scan_rate(str(user_id))
+    except RateLimitExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+        ) from exc
+
+    # Process scan (credit check + Claude API + cache + DB)
+    try:
+        result = await process_vision_scan(
+            image_data=contents,
+            content_type=image.content_type or "image/jpeg",
             user_id=str(user_id),
-            payload={"image_hash": image_hash, "cached": True},
+            token=token,
+            db=db,
         )
-        from app.redis_client import update_job_status
+    except InsufficientCreditsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=exc.message,
+        ) from exc
+    except AIServiceError as exc:
+        logger.error("Vision scan failed: %s", exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=exc.message,
+        ) from exc
 
-        await update_job_status(job_id, "completed", result=cached)
-        return VisionScanResponse(
-            job_id=job_id,
-            status="completed",
-            message="Result found in cache. Check GET /ai/jobs/{job_id}.",
-        )
-
-    # Publish async job
-    job_id = await publish_job(
-        job_type="vision_scan",
-        user_id=str(user_id),
-        payload={
-            "image_hash": image_hash,
-            "content_type": image.content_type or "image/jpeg",
-            "filename": image.filename or "scan.jpg",
-        },
-    )
-
-    return VisionScanResponse(job_id=job_id)
+    return VisionScanSyncResponse(**result)
 
 
-@router.post("/coach/generate", response_model=CoachGenerateResponse)
-async def coach_generate(
+@router.get("/vision/history", response_model=PaginatedVisionHistory)
+async def vision_history(
     user_id: uuid.UUID = Depends(get_current_user_id),
-) -> CoachGenerateResponse:
-    """Submit a request for AI-generated personalized workout plan.
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+) -> PaginatedVisionHistory:
+    """Get vision scan history for the authenticated user.
 
     Args:
         user_id: Authenticated user UUID from JWT.
+        db: Database session.
+        page: Page number (1-based).
+        per_page: Items per page (max 100).
 
     Returns:
-        Job submission response with job_id for polling.
+        Paginated list of vision scan history.
     """
-    job_id = await publish_job(
-        job_type="coach_generate",
-        user_id=str(user_id),
-        payload={"user_id": str(user_id)},
-    )
+    result = await get_vision_history(str(user_id), db, page, per_page)
+    return PaginatedVisionHistory(**result)
 
-    return CoachGenerateResponse(job_id=job_id)
+
+@router.get("/coach/history", response_model=PaginatedCoachHistory)
+async def coach_history(
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(20, ge=1, le=100, description="Items per page"),
+) -> PaginatedCoachHistory:
+    """Get coach generation history for the authenticated user.
+
+    Args:
+        user_id: Authenticated user UUID from JWT.
+        db: Database session.
+        page: Page number (1-based).
+        per_page: Items per page (max 100).
+
+    Returns:
+        Paginated list of coach generation history.
+    """
+    result = await get_coach_history(str(user_id), db, page, per_page)
+    return PaginatedCoachHistory(**result)
 
 
 @router.get("/jobs/{job_id}", response_model=JobStatusResponse)
