@@ -186,9 +186,7 @@ async def test_vision_scan_rate_limited(fake_redis, auth_headers):
             side_effect=RateLimitExceededError("vision_scan", 10, 3600),
         ):
             transport = ASGITransport(app=app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 response = await client.post(
                     "/ai/vision/scan",
                     files={
@@ -217,9 +215,7 @@ async def test_vision_scan_insufficient_credits(fake_redis, auth_headers):
             side_effect=InsufficientCreditsError(),
         ):
             transport = ASGITransport(app=app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 response = await client.post(
                     "/ai/vision/scan",
                     files={
@@ -319,9 +315,7 @@ async def test_get_job_not_found(fake_redis, auth_headers):
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
-            response = await client.get(
-                f"/ai/jobs/{uuid.uuid4()}", headers=auth_headers
-            )
+            response = await client.get(f"/ai/jobs/{uuid.uuid4()}", headers=auth_headers)
             assert response.status_code == 404
 
 

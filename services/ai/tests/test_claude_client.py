@@ -104,12 +104,8 @@ class TestAnalyzeEquipmentImage:
         mock_client = MagicMock()
         mock_client.messages.create = AsyncMock(return_value=mock_response)
 
-        with patch(
-            "app.claude_client._get_async_client", return_value=mock_client
-        ):
-            result = await analyze_equipment_image(
-                b"fake image data", "image/jpeg"
-            )
+        with patch("app.claude_client._get_async_client", return_value=mock_client):
+            result = await analyze_equipment_image(b"fake image data", "image/jpeg")
             assert result["equipment_name"] == "Bench Press"
             assert result["brand"] == "Technogym"
 
@@ -122,9 +118,7 @@ class TestAnalyzeEquipmentImage:
         mock_client = MagicMock()
         mock_client.messages.create = AsyncMock(return_value=mock_response)
 
-        with patch(
-            "app.claude_client._get_async_client", return_value=mock_client
-        ):
+        with patch("app.claude_client._get_async_client", return_value=mock_client):
             with pytest.raises(ClaudeAPIError, match="Empty response"):
                 await analyze_equipment_image(b"fake image", "image/jpeg")
 
@@ -142,9 +136,7 @@ class TestAnalyzeEquipmentImage:
             )
         )
 
-        with patch(
-            "app.claude_client._get_async_client", return_value=mock_client
-        ):
+        with patch("app.claude_client._get_async_client", return_value=mock_client):
             with pytest.raises(ClaudeAPIError, match="Claude API error"):
                 await analyze_equipment_image(b"fake image", "image/jpeg")
 
@@ -182,9 +174,7 @@ class TestGenerateWorkoutPlan:
         mock_client = MagicMock()
         mock_client.messages.create = AsyncMock(return_value=mock_response)
 
-        with patch(
-            "app.claude_client._get_async_client", return_value=mock_client
-        ):
+        with patch("app.claude_client._get_async_client", return_value=mock_client):
             result = await generate_workout_plan(
                 photos_data=[(b"photo1", "image/jpeg")],
                 user_data={
@@ -203,17 +193,13 @@ class TestGenerateWorkoutPlan:
         mock_response = MagicMock()
         mock_block = MagicMock()
         mock_block.type = "text"
-        mock_block.text = json.dumps(
-            {"plan_name": "Test Plan", "description": "test", "days": []}
-        )
+        mock_block.text = json.dumps({"plan_name": "Test Plan", "description": "test", "days": []})
         mock_response.content = [mock_block]
 
         mock_client = MagicMock()
         mock_client.messages.create = AsyncMock(return_value=mock_response)
 
-        with patch(
-            "app.claude_client._get_async_client", return_value=mock_client
-        ):
+        with patch("app.claude_client._get_async_client", return_value=mock_client):
             result = await generate_workout_plan(
                 photos_data=[
                     (b"front_photo", "image/jpeg"),
@@ -227,7 +213,5 @@ class TestGenerateWorkoutPlan:
             # Verify all 3 photos + 1 text block were sent
             call_args = mock_client.messages.create.call_args
             content_blocks = call_args.kwargs["messages"][0]["content"]
-            image_blocks = [
-                b for b in content_blocks if b["type"] == "image"
-            ]
+            image_blocks = [b for b in content_blocks if b["type"] == "image"]
             assert len(image_blocks) == 3

@@ -170,9 +170,7 @@ async def vision_history(
     return PaginatedVisionHistory(**result)
 
 
-@router.post(
-    "/coach/generate", response_model=CoachGenerateSyncResponse
-)
+@router.post("/coach/generate", response_model=CoachGenerateSyncResponse)
 async def coach_generate(
     photos: list[UploadFile] = File(...),
     data: str = Form("{}"),
@@ -225,10 +223,7 @@ async def coach_generate(
         if photo.content_type not in ALLOWED_CONTENT_TYPES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    f"Invalid photo type: {photo.content_type}. "
-                    "Allowed: JPEG, PNG."
-                ),
+                detail=(f"Invalid photo type: {photo.content_type}. Allowed: JPEG, PNG."),
             )
 
         contents = await photo.read()
@@ -245,9 +240,7 @@ async def coach_generate(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Empty photo file: {photo.filename}",
             )
-        photos_data.append(
-            (contents, photo.content_type or DEFAULT_CONTENT_TYPE)
-        )
+        photos_data.append((contents, photo.content_type or DEFAULT_CONTENT_TYPE))
 
     # Check rate limit
     try:

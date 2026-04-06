@@ -37,9 +37,7 @@ DEFAULT_IMAGE_TYPE = "image/jpeg"
 class ClaudeAPIError(Exception):
     """Raised when Claude API call fails."""
 
-    def __init__(
-        self, message: str, original_error: Exception | None = None
-    ) -> None:
+    def __init__(self, message: str, original_error: Exception | None = None) -> None:
         self.message = message
         self.original_error = original_error
         super().__init__(message)
@@ -96,9 +94,7 @@ def _parse_json_response(text: str) -> dict:
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as exc:
-        raise ClaudeAPIError(
-            f"Failed to parse Claude response as JSON: {exc}"
-        ) from exc
+        raise ClaudeAPIError(f"Failed to parse Claude response as JSON: {exc}") from exc
 
 
 async def analyze_equipment_image(

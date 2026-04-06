@@ -232,9 +232,7 @@ async def process_coach_generate(
         )
         db.add(generation)
         await db.commit()
-        raise AIServiceError(
-            f"Coach generation failed: {exc.message}"
-        ) from exc
+        raise AIServiceError(f"Coach generation failed: {exc.message}") from exc
 
     # Save to DB
     generation = AICoachGeneration(
@@ -274,9 +272,7 @@ async def get_vision_history(
     # Count total
     from sqlalchemy import func
 
-    count_q = select(func.count()).select_from(AIVisionScan).where(
-        AIVisionScan.user_id == uid
-    )
+    count_q = select(func.count()).select_from(AIVisionScan).where(AIVisionScan.user_id == uid)
     total_result = await db.execute(count_q)
     total = total_result.scalar() or 0
 
@@ -338,8 +334,8 @@ async def get_coach_history(
 
     from sqlalchemy import func
 
-    count_q = select(func.count()).select_from(AICoachGeneration).where(
-        AICoachGeneration.user_id == uid
+    count_q = (
+        select(func.count()).select_from(AICoachGeneration).where(AICoachGeneration.user_id == uid)
     )
     total_result = await db.execute(count_q)
     total = total_result.scalar() or 0

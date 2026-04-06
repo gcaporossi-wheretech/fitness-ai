@@ -95,9 +95,7 @@ async def test_process_vision_scan_cached(fake_redis, mock_db, auth_token, visio
             new_callable=AsyncMock,
             return_value=vision_result,
         ),
-        patch(
-            "app.service.analyze_equipment_image", new_callable=AsyncMock
-        ) as mock_analyze,
+        patch("app.service.analyze_equipment_image", new_callable=AsyncMock) as mock_analyze,
         patch("app.service._deduct_credits", new_callable=AsyncMock) as mock_deduct,
     ):
         result = await process_vision_scan(

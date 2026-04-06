@@ -25,9 +25,7 @@ class AIVisionScan(Base):
     __tablename__ = "ai_vision_scans"
     __table_args__ = {"schema": "ai"}
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     image_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     equipment_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -50,9 +48,7 @@ class AICoachGeneration(Base):
     __tablename__ = "ai_coach_generations"
     __table_args__ = {"schema": "ai"}
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     input_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     photo_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

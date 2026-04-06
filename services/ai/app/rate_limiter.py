@@ -31,9 +31,7 @@ class RateLimitExceededError(Exception):
             window_human = f"{window_seconds // 3600}h"
         else:
             window_human = f"{window_seconds // 60}m"
-        super().__init__(
-            f"Rate limit exceeded for {operation}: max {limit} per {window_human}"
-        )
+        super().__init__(f"Rate limit exceeded for {operation}: max {limit} per {window_human}")
 
 
 async def check_rate_limit(
@@ -97,9 +95,7 @@ async def check_vision_scan_rate(user_id: str) -> int:
     Raises:
         RateLimitExceededError: If limit exceeded.
     """
-    return await check_rate_limit(
-        user_id, "vision_scan", VISION_SCAN_LIMIT, VISION_SCAN_WINDOW
-    )
+    return await check_rate_limit(user_id, "vision_scan", VISION_SCAN_LIMIT, VISION_SCAN_WINDOW)
 
 
 async def check_coach_generate_rate(user_id: str) -> int:

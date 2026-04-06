@@ -90,17 +90,13 @@ def _make_photo(name: str = "photo.jpg", size: int = 100) -> tuple:
 
 
 @pytest.mark.asyncio
-async def test_coach_generate_success(
-    fake_redis, auth_headers, mock_coach_result
-):
+async def test_coach_generate_success(fake_redis, auth_headers, mock_coach_result):
     """Submitting valid photos should return a workout plan."""
     patches = _build_patches(fake_redis, coach_result=mock_coach_result)
 
     with patches[0], patches[1], patches[2], patches[3]:
         transport = ASGITransport(app=app)
-        async with AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
                 "/ai/coach/generate",
                 files=[("photos", _make_photo("front.jpg"))],
@@ -115,17 +111,13 @@ async def test_coach_generate_success(
 
 
 @pytest.mark.asyncio
-async def test_coach_generate_multiple_photos(
-    fake_redis, auth_headers, mock_coach_result
-):
+async def test_coach_generate_multiple_photos(fake_redis, auth_headers, mock_coach_result):
     """Multiple photos should be accepted."""
     patches = _build_patches(fake_redis, coach_result=mock_coach_result)
 
     with patches[0], patches[1], patches[2], patches[3]:
         transport = ASGITransport(app=app)
-        async with AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
                 "/ai/coach/generate",
                 files=[
@@ -146,9 +138,7 @@ async def test_coach_generate_no_auth(fake_redis):
 
     with patches[0], patches[1], patches[2]:
         transport = ASGITransport(app=app)
-        async with AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
                 "/ai/coach/generate",
                 files=[("photos", _make_photo())],
@@ -164,9 +154,7 @@ async def test_coach_generate_invalid_photo_type(fake_redis, auth_headers):
 
     with patches[0], patches[1], patches[2]:
         transport = ASGITransport(app=app)
-        async with AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
                 "/ai/coach/generate",
                 files=[
@@ -189,9 +177,7 @@ async def test_coach_generate_too_many_photos(fake_redis, auth_headers):
 
     with patches[0], patches[1], patches[2]:
         transport = ASGITransport(app=app)
-        async with AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
                 "/ai/coach/generate",
                 files=[("photos", _make_photo(f"p{i}.jpg")) for i in range(6)],
@@ -209,9 +195,7 @@ async def test_coach_generate_invalid_json_data(fake_redis, auth_headers):
 
     with patches[0], patches[1], patches[2]:
         transport = ASGITransport(app=app)
-        async with AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
                 "/ai/coach/generate",
                 files=[("photos", _make_photo())],
@@ -229,14 +213,10 @@ async def test_coach_generate_empty_photo(fake_redis, auth_headers):
 
     with patches[0], patches[1], patches[2]:
         transport = ASGITransport(app=app)
-        async with AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.post(
                 "/ai/coach/generate",
-                files=[
-                    ("photos", ("empty.jpg", io.BytesIO(b""), "image/jpeg"))
-                ],
+                files=[("photos", ("empty.jpg", io.BytesIO(b""), "image/jpeg"))],
                 data={"data": "{}"},
                 headers=auth_headers,
             )
@@ -258,9 +238,7 @@ async def test_coach_generate_rate_limited(fake_redis, auth_headers):
             side_effect=RateLimitExceededError("coach_generate", 3, 86400),
         ):
             transport = ASGITransport(app=app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 response = await client.post(
                     "/ai/coach/generate",
                     files=[("photos", _make_photo())],
@@ -271,9 +249,7 @@ async def test_coach_generate_rate_limited(fake_redis, auth_headers):
 
 
 @pytest.mark.asyncio
-async def test_coach_generate_insufficient_credits(
-    fake_redis, auth_headers
-):
+async def test_coach_generate_insufficient_credits(fake_redis, auth_headers):
     """Coach generation should return 402 when credits insufficient."""
     from app.service import InsufficientCreditsError
 
@@ -286,9 +262,7 @@ async def test_coach_generate_insufficient_credits(
             side_effect=InsufficientCreditsError(),
         ):
             transport = ASGITransport(app=app)
-            async with AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
                 response = await client.post(
                     "/ai/coach/generate",
                     files=[("photos", _make_photo())],
@@ -325,9 +299,7 @@ async def test_coach_history_empty(fake_redis, auth_headers):
         ),
     ):
         transport = ASGITransport(app=app)
-        async with AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.get(
                 "/ai/coach/history",
                 headers=auth_headers,
