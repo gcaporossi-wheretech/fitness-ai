@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fitness_ai/core/router/app_router.dart';
 import 'package:fitness_ai/core/storage/hive_storage.dart';
 import 'package:fitness_ai/core/theme/app_theme.dart';
+import 'package:fitness_ai/l10n/generated/app_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +29,14 @@ class FitnessAIApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
       routerConfig: router,
+      localizationsDelegates: const [
+        S.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: S.supportedLocales,
+      locale: const Locale('it'),
     );
   }
 }
