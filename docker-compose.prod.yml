@@ -1,0 +1,82 @@
+# Production docker-compose override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Prerequisites:
+# - Set DOMAIN=fitnessai.app in .env
+# - Set ACME_EMAIL=admin@fitnessai.app in .env
+# - Ensure DNS A record points to the server IP
+
+version: "3.9"
+
+services:
+  traefik:
+    ports:
+      - "80:80"
+      - "443:443"
+      # Dashboard port removed in production
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/traefik.prod.yml:/etc/traefik/traefik.yml:ro
+      - ./infra/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - letsencrypt:/letsencrypt
+
+  auth:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=Host(`${DOMAIN:-fitnessai.app}`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.auth.entrypoints=websecure"
+      - "traefik.http.routers.auth.tls=true"
+      - "traefik.http.routers.auth.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.auth.middlewares=security-headers@file,rate-limit-auth@file"
+      - "traefik.http.services.auth.loadbalancer.server.port=8001"
+
+  workouts:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.workouts.rule=Host(`${DOMAIN:-fitnessai.app}`) && PathPrefix(`/workouts`)"
+      - "traefik.http.routers.workouts.entrypoints=websecure"
+      - "traefik.http.routers.workouts.tls=true"
+      - "traefik.http.routers.workouts.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.workouts.middlewares=security-headers@file,rate-limit-global@file"
+      - "traefik.http.services.workouts.loadbalancer.server.port=8002"
+
+  ai:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ai.rule=Host(`${DOMAIN:-fitnessai.app}`) && PathPrefix(`/ai`)"
+      - "traefik.http.routers.ai.entrypoints=websecure"
+      - "traefik.http.routers.ai.tls=true"
+      - "traefik.http.routers.ai.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.ai.middlewares=security-headers@file,rate-limit-ai@file,body-limit@file"
+      - "traefik.http.services.ai.loadbalancer.server.port=8003"
+
+  analytics:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.analytics.rule=Host(`${DOMAIN:-fitnessai.app}`) && PathPrefix(`/analytics`)"
+      - "traefik.http.routers.analytics.entrypoints=websecure"
+      - "traefik.http.routers.analytics.tls=true"
+      - "traefik.http.routers.analytics.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.analytics.middlewares=security-headers@file,rate-limit-global@file"
+      - "traefik.http.services.analytics.loadbalancer.server.port=8004"
+
+  web:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.web.rule=Host(`${DOMAIN:-fitnessai.app}`)"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls=true"
+      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.web.priority=1"
+      - "traefik.http.services.web.loadbalancer.server.port=3000"
+
+  db:
+    # Production: no port exposed to host
+    ports: []
+
+  redis:
+    # Production: no port exposed to host
+    ports: []
+
+volumes:
+  letsencrypt:
