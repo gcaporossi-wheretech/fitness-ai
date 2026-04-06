@@ -20,6 +20,7 @@ python_functions = "test_*"
 [tool.coverage.run]
 source = ["app"]
 omit = ["tests/*", "*/migrations/*"]
+concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
 fail_under = 80
