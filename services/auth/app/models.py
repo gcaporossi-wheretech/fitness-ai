@@ -75,17 +75,13 @@ class WebAuthnCredential(Base):
     __tablename__ = "webauthn_credentials"
     __table_args__ = {"schema": "auth"}
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("auth.users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    credential_id: Mapped[str] = mapped_column(
-        String(512), unique=True, nullable=False
-    )
+    credential_id: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
     public_key: Mapped[str] = mapped_column(String(2048), nullable=False)
     sign_count: Mapped[int] = mapped_column(Integer, default=0)
     device_name: Mapped[str | None] = mapped_column(String(255))

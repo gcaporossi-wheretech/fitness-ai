@@ -169,9 +169,7 @@ async def test_list_webauthn_credentials(client: AsyncClient):
 
     # Register two credentials
     for i in range(2):
-        await client.post(
-            "/auth/webauthn/register/begin", headers=headers
-        )
+        await client.post("/auth/webauthn/register/begin", headers=headers)
         await client.post(
             "/auth/webauthn/register/complete",
             headers=headers,
@@ -183,9 +181,7 @@ async def test_list_webauthn_credentials(client: AsyncClient):
         )
 
     # List credentials
-    response = await client.get(
-        "/auth/webauthn/credentials", headers=headers
-    )
+    response = await client.get("/auth/webauthn/credentials", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
@@ -196,8 +192,6 @@ async def test_list_webauthn_credentials_empty(client: AsyncClient):
     """List credentials for user with none should return empty list."""
     headers = await register_and_get_token(client)
 
-    response = await client.get(
-        "/auth/webauthn/credentials", headers=headers
-    )
+    response = await client.get("/auth/webauthn/credentials", headers=headers)
     assert response.status_code == 200
     assert response.json() == []

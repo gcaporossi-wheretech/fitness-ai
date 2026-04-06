@@ -174,7 +174,5 @@ async def test_unicode_injection_name(client: AsyncClient):
     if resp.status_code == 201:
         # If stored, verify it's returned as-is (not executed)
         token = resp.json()["tokens"]["access_token"]
-        profile = await client.get(
-            "/auth/me", headers={"Authorization": f"Bearer {token}"}
-        )
+        profile = await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert "<script>" in profile.json()["name"]

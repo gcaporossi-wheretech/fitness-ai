@@ -116,8 +116,7 @@ class AuthService:
         refresh_token_record = RefreshToken(
             user_id=user.id,
             token_hash=token_hash,
-            expires_at=datetime.now(UTC)
-            + timedelta(days=settings.jwt_refresh_expiry_days),
+            expires_at=datetime.now(UTC) + timedelta(days=settings.jwt_refresh_expiry_days),
         )
         self.db.add(refresh_token_record)
         await self.db.commit()
@@ -150,8 +149,7 @@ class AuthService:
         refresh_token_record = RefreshToken(
             user_id=user.id,
             token_hash=token_hash,
-            expires_at=datetime.now(UTC)
-            + timedelta(days=settings.jwt_refresh_expiry_days),
+            expires_at=datetime.now(UTC) + timedelta(days=settings.jwt_refresh_expiry_days),
         )
         self.db.add(refresh_token_record)
 
@@ -206,8 +204,7 @@ class AuthService:
         new_token = RefreshToken(
             user_id=user.id,
             token_hash=new_hash,
-            expires_at=datetime.now(UTC)
-            + timedelta(days=settings.jwt_refresh_expiry_days),
+            expires_at=datetime.now(UTC) + timedelta(days=settings.jwt_refresh_expiry_days),
         )
         self.db.add(new_token)
         await self.db.commit()
@@ -309,9 +306,7 @@ class AuthService:
     # WebAuthn
     # ===========================================================
 
-    async def webauthn_begin_register(
-        self, user_id: uuid.UUID
-    ) -> dict:
+    async def webauthn_begin_register(self, user_id: uuid.UUID) -> dict:
         """Begin WebAuthn registration — generate a challenge.
 
         Args:
@@ -369,9 +364,7 @@ class AuthService:
 
         # Check for duplicate credential
         existing = await self.db.execute(
-            select(WebAuthnCredential).where(
-                WebAuthnCredential.credential_id == credential_id
-            )
+            select(WebAuthnCredential).where(WebAuthnCredential.credential_id == credential_id)
         )
         if existing.scalar_one_or_none():
             raise WebAuthnError("Credential already registered")
@@ -388,9 +381,7 @@ class AuthService:
         await self.db.refresh(credential)
         return credential
 
-    async def webauthn_begin_login(
-        self, credential_id: str
-    ) -> dict:
+    async def webauthn_begin_login(self, credential_id: str) -> dict:
         """Begin WebAuthn login — find credential and generate challenge.
 
         Args:
@@ -403,9 +394,7 @@ class AuthService:
             WebAuthnError: If credential not found.
         """
         result = await self.db.execute(
-            select(WebAuthnCredential).where(
-                WebAuthnCredential.credential_id == credential_id
-            )
+            select(WebAuthnCredential).where(WebAuthnCredential.credential_id == credential_id)
         )
         credential = result.scalar_one_or_none()
         if not credential:
@@ -460,9 +449,7 @@ class AuthService:
 
         # Get credential and user
         result = await self.db.execute(
-            select(WebAuthnCredential).where(
-                WebAuthnCredential.credential_id == credential_id
-            )
+            select(WebAuthnCredential).where(WebAuthnCredential.credential_id == credential_id)
         )
         credential = result.scalar_one_or_none()
         if not credential:
@@ -483,17 +470,14 @@ class AuthService:
         refresh_token_record = RefreshToken(
             user_id=user.id,
             token_hash=token_hash,
-            expires_at=datetime.now(UTC)
-            + timedelta(days=settings.jwt_refresh_expiry_days),
+            expires_at=datetime.now(UTC) + timedelta(days=settings.jwt_refresh_expiry_days),
         )
         self.db.add(refresh_token_record)
         await self.db.commit()
 
         return user, access_token, raw_refresh
 
-    async def list_webauthn_credentials(
-        self, user_id: uuid.UUID
-    ) -> list[WebAuthnCredential]:
+    async def list_webauthn_credentials(self, user_id: uuid.UUID) -> list[WebAuthnCredential]:
         """List all WebAuthn credentials for a user.
 
         Args:
@@ -542,9 +526,7 @@ class AuthService:
                 "limitations": user.limitations,
                 "ai_credits": user.ai_credits,
                 "language": user.language,
-                "created_at": user.created_at.isoformat()
-                if user.created_at
-                else None,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
             },
             "webauthn_credentials": [],
             "workout_plans": [],
@@ -559,9 +541,7 @@ class AuthService:
             {
                 "credential_id": c.credential_id,
                 "device_name": c.device_name,
-                "created_at": c.created_at.isoformat()
-                if c.created_at
-                else None,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
             }
             for c in creds
         ]
@@ -575,9 +555,7 @@ class AuthService:
                 ),
                 {"uid": user_id},
             )
-            export["workout_plans"] = [
-                dict(row._mapping) for row in plans_result
-            ]
+            export["workout_plans"] = [dict(row._mapping) for row in plans_result]
         except Exception as exc:  # noqa: BLE001
             self.logger.debug("Could not read workout plans: %s", exc)
 
@@ -590,9 +568,7 @@ class AuthService:
                 ),
                 {"uid": user_id},
             )
-            export["workout_sessions"] = [
-                dict(row._mapping) for row in sessions_result
-            ]
+            export["workout_sessions"] = [dict(row._mapping) for row in sessions_result]
         except Exception as exc:  # noqa: BLE001
             self.logger.debug("Could not read workout sessions: %s", exc)
 
@@ -605,9 +581,7 @@ class AuthService:
                 ),
                 {"uid": user_id},
             )
-            export["ai_vision_scans"] = [
-                dict(row._mapping) for row in scans_result
-            ]
+            export["ai_vision_scans"] = [dict(row._mapping) for row in scans_result]
         except Exception as exc:  # noqa: BLE001
             self.logger.debug("Could not read AI vision scans: %s", exc)
 
@@ -619,20 +593,14 @@ class AuthService:
                 ),
                 {"uid": user_id},
             )
-            export["ai_coach_generations"] = [
-                dict(row._mapping) for row in coach_result
-            ]
+            export["ai_coach_generations"] = [dict(row._mapping) for row in coach_result]
         except Exception as exc:  # noqa: BLE001
             self.logger.debug("Could not read AI coach data: %s", exc)
 
-        self.logger.info(
-            "GDPR data export completed for user=%s", uid_str
-        )
+        self.logger.info("GDPR data export completed for user=%s", uid_str)
         return export
 
-    async def delete_account(
-        self, user_id: uuid.UUID, password: str
-    ) -> bool:
+    async def delete_account(self, user_id: uuid.UUID, password: str) -> bool:
         """Delete a user account and all associated data (GDPR).
 
         Verifies password before deletion. CASCADE deletes handle
@@ -671,7 +639,5 @@ class AuthService:
         await self.db.delete(user)
         await self.db.commit()
 
-        self.logger.info(
-            "GDPR account deletion completed for user=%s", uid_str
-        )
+        self.logger.info("GDPR account deletion completed for user=%s", uid_str)
         return True
