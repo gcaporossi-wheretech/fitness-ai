@@ -67,16 +67,8 @@ class VisionHistoryItem(BaseModel):
 # ============================================================
 
 
-class CoachGenerateResponse(BaseModel):
-    """Response for an AI coach generation submission (async job)."""
-
-    job_id: str
-    status: str = "pending"
-    message: str = "Coach generation job submitted. Poll GET /ai/jobs/{job_id} for results."
-
-
-class CoachResult(BaseModel):
-    """Result of a coach generation: personalized workout plan."""
+class CoachGenerateSyncResponse(BaseModel):
+    """Synchronous response for coach generation."""
 
     plan_name: str
     description: str
@@ -86,6 +78,7 @@ class CoachResult(BaseModel):
     days: list[dict] = Field(default_factory=list)
     progression_notes: str | None = None
     nutrition_tips: str | None = None
+    generation_id: str | None = None
 
 
 class CoachHistoryItem(BaseModel):
