@@ -87,3 +87,47 @@ class CreditsResponse(BaseModel):
     """Schema for AI credits balance."""
 
     credits: int
+
+
+# ============================================================
+# WebAuthn
+# ============================================================
+
+
+class WebAuthnRegisterRequest(BaseModel):
+    """Schema for WebAuthn credential registration."""
+
+    credential_id: str = Field(min_length=1, max_length=512)
+    public_key: str = Field(min_length=1, max_length=2048)
+    device_name: str | None = Field(None, max_length=255)
+
+
+class WebAuthnRegisterResponse(BaseModel):
+    """Response for WebAuthn registration: includes challenge."""
+
+    challenge: str
+    rp_id: str = "fitnessai.app"
+    rp_name: str = "FitnessAI"
+    user_id: str
+    user_name: str
+    timeout: int = 60000
+
+
+class WebAuthnLoginRequest(BaseModel):
+    """Schema for WebAuthn login."""
+
+    credential_id: str
+    authenticator_data: str
+    client_data_json: str
+    signature: str
+
+
+class WebAuthnCredentialResponse(BaseModel):
+    """Schema for a stored WebAuthn credential."""
+
+    id: uuid.UUID
+    credential_id: str
+    device_name: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

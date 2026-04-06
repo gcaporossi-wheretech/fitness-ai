@@ -63,3 +63,32 @@ class RefreshToken(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
+
+
+class WebAuthnCredential(Base):
+    """WebAuthn credential (passkey/biometric) for a user device.
+
+    Stores the public key and sign count for FIDO2/WebAuthn
+    authentication (Face ID, Touch ID, passkeys).
+    """
+
+    __tablename__ = "webauthn_credentials"
+    __table_args__ = {"schema": "auth"}
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("auth.users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    credential_id: Mapped[str] = mapped_column(
+        String(512), unique=True, nullable=False
+    )
+    public_key: Mapped[str] = mapped_column(String(2048), nullable=False)
+    sign_count: Mapped[int] = mapped_column(Integer, default=0)
+    device_name: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
