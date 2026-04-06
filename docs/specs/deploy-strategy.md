@@ -35,9 +35,30 @@ AWS EC2 (t3.small, ~15$/mese)
 ## Deploy flow
 1. Push su `develop` -> GitHub Actions pipeline (lint + test + security per ogni servizio)
 2. Merge da `develop` a `main` -> pipeline completa + build Docker images per tutti i servizi
-3. SSH su EC2 -> `docker compose pull && docker compose up -d`
+3. SSH su EC2 -> `cd /opt/fitnessai && ./infra/aws/deploy.sh main`
 4. Health check automatico per ogni servizio -> rollback se qualsiasi /health non risponde entro 30s
 5. Rolling update: aggiornare un servizio alla volta per minimizzare downtime
+
+## Initial EC2 Setup
+```bash
+# On a fresh Ubuntu 24.04 LTS EC2 instance (t3.small):
+scp infra/aws/setup-ec2.sh ubuntu@<IP>:~
+ssh ubuntu@<IP> bash setup-ec2.sh
+
+# Then clone and configure:
+cd /opt/fitnessai
+git clone https://github.com/gcaporossi-wheretech/fitness-ai .
+cp .env.example .env
+# Edit .env with production values (JWT_SECRET, ANTHROPIC_API_KEY, DB_PASSWORD, DOMAIN)
+./infra/aws/deploy.sh main
+```
+
+## Deploy script
+`infra/aws/deploy.sh [branch]` — pulls code, builds, starts, verifies health.
+
+## Backup script
+`infra/aws/backup-db.sh` — daily pg_dump to S3, 30-day retention.
+Install: `sudo cp infra/aws/backup-db.sh /etc/cron.daily/ && sudo chmod +x /etc/cron.daily/backup-db.sh`
 
 ## Backup
 - PostgreSQL: pg_dump giornaliero -> S3 bucket (retention 30 giorni)
