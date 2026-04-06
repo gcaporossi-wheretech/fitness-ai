@@ -9,6 +9,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
 from app.schemas import (
+    AccountDeleteRequest,
     AuthResponse,
     CreditsResponse,
     TokenRefreshRequest,
@@ -194,6 +195,59 @@ async def deduct_credits(
             detail=exc.message,
         ) from exc
     return CreditsResponse(credits=remaining)
+
+
+# ============================================================
+# GDPR: Data Export & Account Deletion
+# ============================================================
+
+
+@router.get("/me/export")
+async def export_user_data(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Export all user data for GDPR compliance.
+
+    Returns a complete JSON document with profile, credentials,
+    workout plans, sessions, and AI scan history.
+
+    Args:
+        current_user: Authenticated user from JWT.
+        db: Database session.
+
+    Returns:
+        Complete user data export.
+    """
+    service = AuthService(db)
+    return await service.export_user_data(current_user.id)
+
+
+@router.delete("/me", status_code=204)
+async def delete_account(
+    request: AccountDeleteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete user account and all associated data (GDPR right to erasure).
+
+    Requires password confirmation for security.
+    CASCADE deletes all auth-owned data. Cross-schema data
+    (workouts, AI) deleted explicitly.
+
+    Args:
+        request: Password confirmation.
+        current_user: Authenticated user from JWT.
+        db: Database session.
+    """
+    service = AuthService(db)
+    try:
+        await service.delete_account(current_user.id, request.password)
+    except InvalidCredentialsError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password",
+        ) from exc
 
 
 # ============================================================
