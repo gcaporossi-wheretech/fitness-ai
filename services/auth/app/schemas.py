@@ -94,6 +94,12 @@ class CreditsResponse(BaseModel):
 # ============================================================
 
 
+class AccountDeleteRequest(BaseModel):
+    """Schema for account deletion request (GDPR)."""
+
+    password: str = Field(min_length=1, description="Password confirmation")
+
+
 class WebAuthnRegisterRequest(BaseModel):
     """Schema for WebAuthn credential registration."""
 

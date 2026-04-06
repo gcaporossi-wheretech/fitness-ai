@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -507,3 +508,170 @@ class AuthService:
             .order_by(WebAuthnCredential.created_at.desc())
         )
         return list(result.scalars().all())
+
+    # ===========================================================
+    # GDPR: Data Export & Account Deletion
+    # ===========================================================
+
+    logger = logging.getLogger(__name__)
+
+    async def export_user_data(self, user_id: uuid.UUID) -> dict:
+        """Export all user data for GDPR compliance.
+
+        Aggregates data from auth schema and cross-schema reads
+        for workouts and AI data (read-only access).
+
+        Args:
+            user_id: The user UUID.
+
+        Returns:
+            Complete user data export dict.
+        """
+        user = await self.get_user_by_id(user_id)
+        uid_str = str(user_id)
+
+        export = {
+            "export_version": "1.0",
+            "exported_at": datetime.now(UTC).isoformat(),
+            "profile": {
+                "id": uid_str,
+                "email": user.email,
+                "name": user.name,
+                "age": user.age,
+                "goals": user.goals,
+                "limitations": user.limitations,
+                "ai_credits": user.ai_credits,
+                "language": user.language,
+                "created_at": user.created_at.isoformat()
+                if user.created_at
+                else None,
+            },
+            "webauthn_credentials": [],
+            "workout_plans": [],
+            "workout_sessions": [],
+            "ai_vision_scans": [],
+            "ai_coach_generations": [],
+        }
+
+        # WebAuthn credentials
+        creds = await self.list_webauthn_credentials(user_id)
+        export["webauthn_credentials"] = [
+            {
+                "credential_id": c.credential_id,
+                "device_name": c.device_name,
+                "created_at": c.created_at.isoformat()
+                if c.created_at
+                else None,
+            }
+            for c in creds
+        ]
+
+        # Cross-schema reads (workouts, AI) — best effort
+        try:
+            plans_result = await self.db.execute(
+                text(
+                    "SELECT id, name, description, source, created_at "
+                    "FROM workouts.workout_plans WHERE user_id = :uid"
+                ),
+                {"uid": user_id},
+            )
+            export["workout_plans"] = [
+                dict(row._mapping) for row in plans_result
+            ]
+        except Exception as exc:  # noqa: BLE001
+            self.logger.debug("Could not read workout plans: %s", exc)
+
+        try:
+            sessions_result = await self.db.execute(
+                text(
+                    "SELECT id, day_name, started_at, completed_at, "
+                    "duration_seconds, notes FROM "
+                    "workouts.workout_sessions WHERE user_id = :uid"
+                ),
+                {"uid": user_id},
+            )
+            export["workout_sessions"] = [
+                dict(row._mapping) for row in sessions_result
+            ]
+        except Exception as exc:  # noqa: BLE001
+            self.logger.debug("Could not read workout sessions: %s", exc)
+
+        try:
+            scans_result = await self.db.execute(
+                text(
+                    "SELECT id, equipment_name, equipment_brand, "
+                    "credits_used, created_at FROM "
+                    "ai.ai_vision_scans WHERE user_id = :uid"
+                ),
+                {"uid": user_id},
+            )
+            export["ai_vision_scans"] = [
+                dict(row._mapping) for row in scans_result
+            ]
+        except Exception as exc:  # noqa: BLE001
+            self.logger.debug("Could not read AI vision scans: %s", exc)
+
+        try:
+            coach_result = await self.db.execute(
+                text(
+                    "SELECT id, photo_count, credits_used, created_at "
+                    "FROM ai.ai_coach_generations WHERE user_id = :uid"
+                ),
+                {"uid": user_id},
+            )
+            export["ai_coach_generations"] = [
+                dict(row._mapping) for row in coach_result
+            ]
+        except Exception as exc:  # noqa: BLE001
+            self.logger.debug("Could not read AI coach data: %s", exc)
+
+        self.logger.info(
+            "GDPR data export completed for user=%s", uid_str
+        )
+        return export
+
+    async def delete_account(
+        self, user_id: uuid.UUID, password: str
+    ) -> bool:
+        """Delete a user account and all associated data (GDPR).
+
+        Verifies password before deletion. CASCADE deletes handle
+        auth schema data. Cross-schema data deleted explicitly.
+
+        Args:
+            user_id: The user UUID.
+            password: Password confirmation for security.
+
+        Returns:
+            True if account was deleted.
+
+        Raises:
+            InvalidCredentialsError: If password is incorrect.
+        """
+        user = await self.get_user_by_id(user_id)
+
+        if not verify_password(password, user.password_hash):
+            raise InvalidCredentialsError()
+
+        uid_str = str(user_id)
+
+        # Delete cross-schema data (best effort)
+        for stmt in [
+            "DELETE FROM workouts.workout_sessions WHERE user_id = :uid",
+            "DELETE FROM workouts.workout_plans WHERE user_id = :uid",
+            "DELETE FROM ai.ai_vision_scans WHERE user_id = :uid",
+            "DELETE FROM ai.ai_coach_generations WHERE user_id = :uid",
+        ]:
+            try:
+                await self.db.execute(text(stmt), {"uid": user_id})
+            except Exception as exc:  # noqa: BLE001
+                self.logger.debug("Cross-schema delete skipped: %s", exc)
+
+        # Delete user (CASCADE handles auth schema tables)
+        await self.db.delete(user)
+        await self.db.commit()
+
+        self.logger.info(
+            "GDPR account deletion completed for user=%s", uid_str
+        )
+        return True
