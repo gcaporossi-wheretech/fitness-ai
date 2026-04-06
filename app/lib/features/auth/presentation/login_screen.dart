@@ -7,6 +7,7 @@ import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/auth/domain/auth_state.dart';
 import 'package:fitness_ai/features/auth/presentation/auth_notifier.dart';
+import 'package:fitness_ai/l10n/generated/app_localizations.dart';
 
 /// Login screen with email and password fields.
 /// Matches the dark premium design from the prototype.
@@ -43,6 +44,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = S.of(context)!;
+
     // Show error snackbar when auth fails
     ref.listen<AuthState>(authNotifierProvider, (prev, next) {
       if (next is AuthError) {
@@ -65,16 +68,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 60),
-                const GradientText(
-                  'FitnessAI',
-                  style: TextStyle(
+                GradientText(
+                  l.appTitle,
+                  style: const TextStyle(
                     fontSize: 36,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Il tuo coach AI personale',
+                  l.tagline,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 48),
@@ -82,16 +85,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    hintText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    hintText: l.email,
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Inserisci la tua email';
+                      return l.enterEmail;
                     }
                     if (!value.contains('@')) {
-                      return 'Email non valida';
+                      return l.invalidEmail;
                     }
                     return null;
                   },
@@ -103,7 +106,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
                   decoration: InputDecoration(
-                    hintText: 'Password',
+                    hintText: l.password,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -117,14 +120,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Inserisci la password';
+                      return l.enterPassword;
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 GlowButton(
-                  label: 'Accedi',
+                  label: l.login,
                   onPressed: _submit,
                   enabled: !_isSubmitting,
                   icon: Icons.login,
@@ -132,9 +135,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: AppSpacing.md),
                 TextButton(
                   onPressed: () => context.go('/register'),
-                  child: const Text(
-                    'Non hai un account? Registrati',
-                    style: TextStyle(color: AppColors.primary),
+                  child: Text(
+                    l.noAccountRegister,
+                    style: const TextStyle(color: AppColors.primary),
                   ),
                 ),
               ],

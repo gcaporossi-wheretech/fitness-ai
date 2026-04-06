@@ -5,6 +5,7 @@ import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/auth/presentation/auth_notifier.dart';
+import 'package:fitness_ai/l10n/generated/app_localizations.dart';
 
 /// Registration screen with name, email, and password fields.
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -44,8 +45,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = S.of(context)!;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Crea Account')),
+      appBar: AppBar(title: Text(l.createAccount)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -55,22 +58,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: AppSpacing.lg),
-                const GradientText(
-                  'Benvenuto!',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                GradientText(
+                  l.welcome,
+                  style: const TextStyle(
+                      fontSize: 28, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Crea il tuo account per iniziare',
+                  l.createAccountToStart,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 TextFormField(
                   controller: _nameController,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    hintText: 'Nome (opzionale)',
-                    prefixIcon: Icon(Icons.person_outline),
+                  decoration: InputDecoration(
+                    hintText: l.nameOptional,
+                    prefixIcon: const Icon(Icons.person_outline),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -78,16 +82,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    hintText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
+                  decoration: InputDecoration(
+                    hintText: l.email,
+                    prefixIcon: const Icon(Icons.email_outlined),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Inserisci la tua email';
+                      return l.enterEmail;
                     }
                     if (!value.contains('@')) {
-                      return 'Email non valida';
+                      return l.invalidEmail;
                     }
                     return null;
                   },
@@ -98,7 +102,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
-                    hintText: 'Password',
+                    hintText: l.password,
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -112,13 +116,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.length < 8) {
-                      return 'Minimo 8 caratteri';
+                      return l.minChars(8);
                     }
                     if (!value.contains(RegExp('[A-Za-z]'))) {
-                      return 'Deve contenere almeno una lettera';
+                      return l.mustContainLetter;
                     }
                     if (!value.contains(RegExp('[0-9]'))) {
-                      return 'Deve contenere almeno un numero';
+                      return l.mustContainNumber;
                     }
                     return null;
                   },
@@ -129,20 +133,20 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
-                    hintText: 'Conferma password',
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    hintText: l.confirmPassword,
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   validator: (value) {
                     if (value != _passwordController.text) {
-                      return 'Le password non corrispondono';
+                      return l.passwordsNoMatch;
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 GlowButton(
-                  label: 'Registrati',
+                  label: l.register,
                   onPressed: _submit,
                   icon: Icons.person_add,
                   color: AppColors.success,
@@ -152,9 +156,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
-                  child: const Text(
-                    'Hai gia un account? Accedi',
-                    style: TextStyle(color: AppColors.primary),
+                  child: Text(
+                    l.haveAccountLogin,
+                    style: const TextStyle(color: AppColors.primary),
                   ),
                 ),
               ],
