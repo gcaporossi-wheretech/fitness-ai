@@ -12,11 +12,15 @@ class ActiveSessionState {
     required this.session,
     this.currentExerciseIndex = 0,
     this.isCompleted = false,
+    this.warmupChecked = const [],
   });
 
   final WorkoutSession session;
   final int currentExerciseIndex;
   final bool isCompleted;
+
+  /// Warmup checklist state (one bool per warmup item).
+  final List<bool> warmupChecked;
 
   ExerciseLog? get currentExercise {
     if (currentExerciseIndex >= session.exercises.length) return null;
@@ -28,15 +32,24 @@ class ActiveSessionState {
       .where((e) => e.skipped || e.sets.every((s) => s.completed))
       .length;
 
+  /// Whether all warmup items are checked.
+  bool get warmupAllDone =>
+      warmupChecked.isNotEmpty && warmupChecked.every((c) => c);
+
+  /// Number of warmup items completed.
+  int get warmupDoneCount => warmupChecked.where((c) => c).length;
+
   ActiveSessionState copyWith({
     WorkoutSession? session,
     int? currentExerciseIndex,
     bool? isCompleted,
+    List<bool>? warmupChecked,
   }) {
     return ActiveSessionState(
       session: session ?? this.session,
       currentExerciseIndex: currentExerciseIndex ?? this.currentExerciseIndex,
       isCompleted: isCompleted ?? this.isCompleted,
+      warmupChecked: warmupChecked ?? this.warmupChecked,
     );
   }
 }
@@ -49,18 +62,54 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
   WorkoutRepository get _repo => ref.read(workoutRepositoryProvider);
 
   /// Start a new session from a workout day plan.
+  /// Pre-fills weights from the last completed session for the same day.
   void startSession(WorkoutDay day, {String? planId}) {
+    // Find previous session for this day to pre-fill weights
+    final allSessions = _repo.getAllLocalSessions();
+    final previousSession = allSessions
+        .where((s) =>
+            s.isCompleted && s.dayName == day.name && s.planId == planId)
+        .toList();
+    final previous = previousSession.isNotEmpty ? previousSession.first : null;
+
     final exercises = day.exercises.map((ep) {
       final repsInt = int.tryParse(ep.reps) ?? 10;
+
+      // Find matching exercise from last session
+      ExerciseLog? prevExercise;
+      if (previous != null) {
+        final matches = previous.exercises
+            .where((e) => e.exerciseName == ep.exerciseName);
+        if (matches.isNotEmpty) prevExercise = matches.first;
+      }
+
       return ExerciseLog(
         exerciseId: ep.exerciseId ?? '',
         exerciseName: ep.exerciseName,
         exerciseType: ep.exerciseType,
         restSeconds: ep.restSeconds,
-        sets: List.generate(
-          ep.sets,
-          (i) => SetLog(setNumber: i + 1, plannedReps: repsInt),
-        ),
+        sets: List.generate(ep.sets, (i) {
+          // Pre-fill weight from last session's corresponding set
+          double prefillWeight = 0;
+          if (prevExercise != null && i < prevExercise.sets.length) {
+            final prevSet = prevExercise.sets[i];
+            if (prevSet.completed && prevSet.weight > 0) {
+              prefillWeight = prevSet.weight;
+            }
+          } else if (prevExercise != null && prevExercise.sets.isNotEmpty) {
+            // Use last available completed set weight
+            final lastCompleted =
+                prevExercise.sets.where((s) => s.completed && s.weight > 0);
+            if (lastCompleted.isNotEmpty) {
+              prefillWeight = lastCompleted.last.weight;
+            }
+          }
+          return SetLog(
+            setNumber: i + 1,
+            plannedReps: repsInt,
+            weight: prefillWeight,
+          );
+        }),
       );
     }).toList();
 
@@ -72,7 +121,10 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
       exercises: exercises,
     );
 
-    state = ActiveSessionState(session: session);
+    state = ActiveSessionState(
+      session: session,
+      warmupChecked: List.filled(day.warmup.length, false),
+    );
     _save();
   }
 
@@ -281,6 +333,27 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
         durationSeconds: duration,
       ),
       isCompleted: true,
+    );
+    _save();
+  }
+
+  /// Toggle a warmup item checkbox.
+  void toggleWarmup(int index) {
+    final s = state;
+    if (s == null) return;
+    if (index < 0 || index >= s.warmupChecked.length) return;
+
+    final updated = List<bool>.from(s.warmupChecked);
+    updated[index] = !updated[index];
+    state = s.copyWith(warmupChecked: updated);
+  }
+
+  /// Set the session rating (1-5 stars).
+  void setRating(int rating) {
+    final s = state;
+    if (s == null) return;
+    state = s.copyWith(
+      session: s.session.copyWith(rating: rating.clamp(0, 5)),
     );
     _save();
   }

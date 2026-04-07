@@ -12,6 +12,7 @@ class WorkoutSession {
     this.durationSeconds,
     this.notes = '',
     this.synced = false,
+    this.rating = 0,
   });
 
   final String id;
@@ -23,6 +24,9 @@ class WorkoutSession {
   final List<ExerciseLog> exercises;
   final String notes;
   final bool synced;
+
+  /// Session rating 1-5 stars (0 = not rated).
+  final int rating;
 
   bool get isCompleted => completedAt != null;
 
@@ -64,6 +68,7 @@ class WorkoutSession {
     List<ExerciseLog>? exercises,
     String? notes,
     bool? synced,
+    int? rating,
   }) {
     return WorkoutSession(
       id: id ?? this.id,
@@ -75,6 +80,7 @@ class WorkoutSession {
       exercises: exercises ?? this.exercises,
       notes: notes ?? this.notes,
       synced: synced ?? this.synced,
+      rating: rating ?? this.rating,
     );
   }
 
@@ -97,6 +103,7 @@ class WorkoutSession {
           .toList(),
       notes: (json['notes'] ?? '') as String,
       synced: (json['synced'] ?? false) as bool,
+      rating: (json['rating'] ?? json['session_rating'] ?? 0) as int,
     );
   }
 
@@ -110,5 +117,6 @@ class WorkoutSession {
         'exercises': exercises.map((e) => e.toJson()).toList(),
         'notes': notes,
         'synced': synced,
+        'rating': rating,
       };
 }

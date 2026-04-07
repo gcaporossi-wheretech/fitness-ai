@@ -70,6 +70,7 @@ class WorkoutRepository {
               .map((e) => e.toApiJson())
               .toList(),
           'notes': session.notes.isNotEmpty ? session.notes : null,
+          'rating': session.rating > 0 ? session.rating : null,
         },
       );
       // Mark as synced locally

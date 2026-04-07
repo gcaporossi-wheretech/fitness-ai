@@ -122,5 +122,23 @@
   "edit": "Edit",
   "close": "Close",
   "loading": "Loading...",
-  "noData": "No data available"
+  "noData": "No data available",
+
+  "rateWorkout": "How was the workout?",
+  "tapToRate": "Tap a star to rate",
+  "ratingTerrible": "Terrible",
+  "ratingPoor": "Poor",
+  "ratingOkay": "Okay",
+  "ratingGood": "Good",
+  "ratingAmazing": "Amazing!",
+  "skip": "Skip",
+  "adherence": "Adherence",
+  "completedSessions": "Completed",
+  "plannedSessions": "Planned",
+  "activeWeeks": "Active weeks",
+  "warmup": "Warmup",
+  "warmupComplete": "Warmup complete!",
+  "swapDay": "Swap day",
+  "editPlan": "Edit Plan",
+  "rating": "Rating"
 }
