@@ -2,13 +2,24 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import 'package:fitness_ai/core/services/timer_notification.dart'
+    if (dart.library.js_interop)
+    'package:fitness_ai/core/services/timer_notification_web.dart';
+
 /// Service for the rest timer between sets.
 /// Uses absolute timestamp so the timer continues even when backgrounded.
+/// Plays audio notifications: tick beep for last 5 seconds, completion beep
+/// when timer reaches zero.
 class RestTimerService extends ChangeNotifier {
+  RestTimerService({this.onComplete});
+
   Timer? _timer;
   DateTime? _endTime;
   int _totalSeconds = 0;
   bool _isRunning = false;
+
+  /// Called once when the timer reaches zero.
+  VoidCallback? onComplete;
 
   int get remainingSeconds {
     if (_endTime == null) return 0;
@@ -40,10 +51,16 @@ class RestTimerService extends ChangeNotifier {
     notifyListeners();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (remainingSeconds <= 0) {
+      final rem = remainingSeconds;
+      if (rem <= 0) {
         _isRunning = false;
         _timer?.cancel();
         _timer = null;
+        TimerNotification.notify();
+        onComplete?.call();
+      } else if (rem <= 5) {
+        // Countdown beep for last 5 seconds
+        TimerNotification.tick();
       }
       notifyListeners();
     });
@@ -58,10 +75,15 @@ class RestTimerService extends ChangeNotifier {
     if (!_isRunning) {
       _isRunning = true;
       _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (remainingSeconds <= 0) {
+        final rem = remainingSeconds;
+        if (rem <= 0) {
           _isRunning = false;
           _timer?.cancel();
           _timer = null;
+          TimerNotification.notify();
+          onComplete?.call();
+        } else if (rem <= 5) {
+          TimerNotification.tick();
         }
         notifyListeners();
       });

@@ -5,6 +5,7 @@ import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/history/data/history_repository.dart';
+import 'package:fitness_ai/features/stats/presentation/adherence_chart.dart';
 import 'package:fitness_ai/features/stats/presentation/volume_chart.dart';
 import 'package:fitness_ai/features/stats/presentation/weight_progress_chart.dart';
 import 'package:fitness_ai/features/workout/domain/workout_session.dart';
@@ -50,6 +51,13 @@ class StatsScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.lg),
                 // Quick summary
                 _QuickSummary(sessions: sessions),
+                const SizedBox(height: AppSpacing.xl),
+                // Adherence chart
+                _SectionTitle(
+                    title: 'Aderenza',
+                    icon: Icons.track_changes),
+                const SizedBox(height: AppSpacing.sm),
+                AdherenceChart(sessions: sessions),
                 const SizedBox(height: AppSpacing.xl),
                 // Weight progress chart
                 _SectionTitle(

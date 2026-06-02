@@ -46,12 +46,20 @@ class SetLog {
     return SetLog(
       setNumber: (json['set_number'] ?? json['setNumber'] ?? 1) as int,
       plannedReps: (json['planned_reps'] ?? json['plannedReps'] ?? 0) as int,
-      actualReps: (json['actual_reps'] ?? json['actualReps'] ?? 0) as int,
+      // Server/imported sessions use `reps`; local cache uses `actual_reps`.
+      actualReps:
+          (json['actual_reps'] ?? json['actualReps'] ?? json['reps'] ?? 0)
+              as int,
       weight: (json['weight'] ?? json['weight_kg'] ?? 0).toDouble(),
       rpe: (json['rpe'] ?? 0).toDouble(),
       durationSeconds:
           (json['duration_seconds'] ?? json['durationSeconds'] ?? 0) as int,
-      completed: (json['completed'] ?? false) as bool,
+      // Historical sets fetched from the server have no `completed` flag —
+      // infer completion from the presence of logged reps/weight.
+      completed: (json['completed'] ??
+          (json['reps'] != null ||
+              json['weight_kg'] != null ||
+              json['actual_reps'] != null)) as bool,
       notes: (json['notes'] ?? '') as String,
     );
   }

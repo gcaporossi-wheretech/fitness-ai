@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fitness_ai/core/services/rest_timer_service.dart';
+import 'package:fitness_ai/core/services/timer_notification.dart'
+    if (dart.library.js_interop)
+    'package:fitness_ai/core/services/timer_notification_web.dart';
 import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/workout/domain/exercise_log.dart';
+import 'package:fitness_ai/features/workout/domain/workout_session.dart';
 import 'package:fitness_ai/features/workout/presentation/active_session_notifier.dart';
 import 'package:fitness_ai/features/workout/presentation/rest_timer_overlay.dart';
 import 'package:fitness_ai/features/workout/presentation/set_input_row.dart';
 
 /// Active workout screen with inline set tracker (Strong-style).
 /// Shows all exercises with expandable set rows, rest timer, and
-/// session controls.
+/// session controls. Includes session rating and celebration overlay
+/// on completion.
 class ActiveWorkoutScreen extends ConsumerStatefulWidget {
   const ActiveWorkoutScreen({super.key});
 
@@ -27,6 +32,13 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
   String? _lastExerciseName;
   int? _lastSetNumber;
   int? _lastTotalSets;
+
+  @override
+  void initState() {
+    super.initState();
+    // Unlock audio on first user gesture context (required by browsers/mobile)
+    TimerNotification.unlockAudio();
+  }
 
   @override
   void dispose() {
@@ -48,45 +60,127 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     final notifier = ref.read(activeSessionProvider.notifier);
     notifier.completeSession();
 
-    // Show completion dialog
+    // Show rating dialog first, then completion screen
+    _showRatingDialog();
+  }
+
+  /// Show a dialog to rate the session 1-5 stars before the celebration.
+  void _showRatingDialog() {
+    int selectedRating = 0;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.bgSecondary,
+          title: const GradientText(
+            'How was the workout?',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) {
+                  final starIndex = i + 1;
+                  return GestureDetector(
+                    onTap: () =>
+                        setDialogState(() => selectedRating = starIndex),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Icon(
+                        starIndex <= selectedRating
+                            ? Icons.star
+                            : Icons.star_border,
+                        color: starIndex <= selectedRating
+                            ? AppColors.warning
+                            : AppColors.textSecondary,
+                        size: 40,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                selectedRating > 0
+                    ? _ratingLabel(selectedRating)
+                    : 'Tap a star to rate',
+                style: TextStyle(
+                  color: selectedRating > 0
+                      ? AppColors.textPrimary
+                      : AppColors.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _showCompletionScreen();
+              },
+              child: const Text(
+                'Skip',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            GlowButton(
+              label: 'Confirm',
+              onPressed: () {
+                if (selectedRating > 0) {
+                  ref
+                      .read(activeSessionProvider.notifier)
+                      .setRating(selectedRating);
+                  Navigator.of(ctx).pop();
+                  _showCompletionScreen();
+                }
+              },
+              enabled: selectedRating > 0,
+              color: AppColors.success,
+              height: 40,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _ratingLabel(int rating) {
+    switch (rating) {
+      case 1:
+        return 'Terrible';
+      case 2:
+        return 'Poor';
+      case 3:
+        return 'Okay';
+      case 4:
+        return 'Good';
+      case 5:
+        return 'Amazing!';
+      default:
+        return '';
+    }
+  }
+
+  /// Show completion dialog with celebration overlay.
+  void _showCompletionScreen() {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         final session = ref.read(activeSessionProvider)?.session;
-        return AlertDialog(
-          backgroundColor: AppColors.bgSecondary,
-          title: const GradientText(
-            'Allenamento completato!',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (session != null) ...[
-                _SummaryRow(
-                    label: 'Durata', value: session.formattedDuration),
-                _SummaryRow(
-                    label: 'Serie completate',
-                    value: '${session.totalCompletedSets}'),
-                _SummaryRow(
-                    label: 'Volume totale',
-                    value: '${session.totalVolume.toStringAsFixed(0)} kg'),
-              ],
-            ],
-          ),
-          actions: [
-            GlowButton(
-              label: 'Chiudi',
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                notifier.closeSession();
-                Navigator.of(context).pop();
-              },
-              color: AppColors.success,
-              height: 48,
-            ),
-          ],
+        return _CompletionDialog(
+          session: session,
+          onClose: () {
+            ref.read(activeSessionProvider.notifier).closeSession();
+            Navigator.of(ctx).pop();
+            Navigator.of(context).pop();
+          },
         );
       },
     );
@@ -286,6 +380,75 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
   }
 }
 
+/// Completion dialog with celebration overlay and session summary.
+class _CompletionDialog extends StatefulWidget {
+  const _CompletionDialog({
+    required this.session,
+    required this.onClose,
+  });
+
+  final WorkoutSession? session;
+  final VoidCallback onClose;
+
+  @override
+  State<_CompletionDialog> createState() => _CompletionDialogState();
+}
+
+class _CompletionDialogState extends State<_CompletionDialog> {
+  bool _showCelebration = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+
+    return Stack(
+      children: [
+        AlertDialog(
+          backgroundColor: AppColors.bgSecondary,
+          title: const GradientText(
+            'Allenamento completato!',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (session != null) ...[
+                _SummaryRow(
+                    label: 'Durata', value: session.formattedDuration),
+                _SummaryRow(
+                    label: 'Serie completate',
+                    value: '${session.totalCompletedSets}'),
+                _SummaryRow(
+                    label: 'Volume totale',
+                    value: '${session.totalVolume.toStringAsFixed(0)} kg'),
+                if (session.rating > 0)
+                  _SummaryRow(
+                    label: 'Valutazione',
+                    value: List.filled(session.rating, '\u2605').join(),
+                  ),
+              ],
+            ],
+          ),
+          actions: [
+            GlowButton(
+              label: 'Chiudi',
+              onPressed: widget.onClose,
+              color: AppColors.success,
+              height: 48,
+            ),
+          ],
+        ),
+        if (_showCelebration)
+          Positioned.fill(
+            child: CelebrationOverlay(
+              onComplete: () => setState(() => _showCelebration = false),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 /// Card for a single exercise showing all its sets inline.
 class _ExerciseCard extends ConsumerWidget {
   const _ExerciseCard({
@@ -300,102 +463,105 @@ class _ExerciseCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GlassmorphismCard(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      borderColor: exercise.isComplete
-          ? AppColors.success.withValues(alpha: 0.3)
-          : exercise.skipped
-              ? AppColors.textDisabled.withValues(alpha: 0.2)
-              : AppColors.primary.withValues(alpha: 0.1),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Exercise header
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  exercise.exerciseName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: exercise.skipped
-                            ? AppColors.textDisabled
-                            : null,
-                        decoration:
-                            exercise.skipped ? TextDecoration.lineThrough : null,
-                      ),
-                ),
-              ),
-              // Skip / Unskip
-              IconButton(
-                icon: Icon(
-                  exercise.skipped ? Icons.undo : Icons.skip_next,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
-                onPressed: () {
-                  if (exercise.skipped) {
-                    ref
-                        .read(activeSessionProvider.notifier)
-                        .unskipExercise(exerciseIndex);
-                  } else {
-                    ref
-                        .read(activeSessionProvider.notifier)
-                        .skipExercise(exerciseIndex);
-                  }
-                },
-              ),
-            ],
-          ),
-          if (!exercise.skipped) ...[
-            const SizedBox(height: AppSpacing.sm),
-            // Set header row
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-              child: Row(
-                children: [
-                  const SizedBox(width: 32, child: Text('SET', style: _headerStyle)),
-                  if (exercise.exerciseType == 'weighted') ...[
-                    const Expanded(child: Text('KG', style: _headerStyle, textAlign: TextAlign.center)),
-                    const Expanded(child: Text('REPS', style: _headerStyle, textAlign: TextAlign.center)),
-                  ] else if (exercise.exerciseType == 'timed') ...[
-                    const Expanded(child: Text('SEC', style: _headerStyle, textAlign: TextAlign.center)),
-                  ] else ...[
-                    const Expanded(child: Text('REPS', style: _headerStyle, textAlign: TextAlign.center)),
-                  ],
-                  const SizedBox(width: 36),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            // Set rows
-            ...exercise.sets.asMap().entries.map((entry) {
-              return SetInputRow(
-                setLog: entry.value,
-                exerciseType: exercise.exerciseType,
-                exerciseIndex: exerciseIndex,
-                setIndex: entry.key,
-                onCompleted: () => onSetCompleted(entry.key),
-              );
-            }),
-            // Add/remove set controls
-            const SizedBox(height: AppSpacing.xs),
+    return StaggeredListItem(
+      index: exerciseIndex,
+      child: GlassmorphismCard(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        borderColor: exercise.isComplete
+            ? AppColors.success.withValues(alpha: 0.3)
+            : exercise.skipped
+                ? AppColors.textDisabled.withValues(alpha: 0.2)
+                : AppColors.primary.withValues(alpha: 0.1),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Exercise header
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                TextButton.icon(
-                  onPressed: () => ref
-                      .read(activeSessionProvider.notifier)
-                      .addSet(exerciseIndex: exerciseIndex),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Serie'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.primary,
+                Expanded(
+                  child: Text(
+                    exercise.exerciseName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: exercise.skipped
+                              ? AppColors.textDisabled
+                              : null,
+                          decoration:
+                              exercise.skipped ? TextDecoration.lineThrough : null,
+                        ),
                   ),
+                ),
+                // Skip / Unskip
+                IconButton(
+                  icon: Icon(
+                    exercise.skipped ? Icons.undo : Icons.skip_next,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    if (exercise.skipped) {
+                      ref
+                          .read(activeSessionProvider.notifier)
+                          .unskipExercise(exerciseIndex);
+                    } else {
+                      ref
+                          .read(activeSessionProvider.notifier)
+                          .skipExercise(exerciseIndex);
+                    }
+                  },
                 ),
               ],
             ),
+            if (!exercise.skipped) ...[
+              const SizedBox(height: AppSpacing.sm),
+              // Set header row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 32, child: Text('SET', style: _headerStyle)),
+                    if (exercise.exerciseType == 'weighted') ...[
+                      const Expanded(child: Text('KG', style: _headerStyle, textAlign: TextAlign.center)),
+                      const Expanded(child: Text('REPS', style: _headerStyle, textAlign: TextAlign.center)),
+                    ] else if (exercise.exerciseType == 'timed') ...[
+                      const Expanded(child: Text('SEC', style: _headerStyle, textAlign: TextAlign.center)),
+                    ] else ...[
+                      const Expanded(child: Text('REPS', style: _headerStyle, textAlign: TextAlign.center)),
+                    ],
+                    const SizedBox(width: 36),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              // Set rows
+              ...exercise.sets.asMap().entries.map((entry) {
+                return SetInputRow(
+                  setLog: entry.value,
+                  exerciseType: exercise.exerciseType,
+                  exerciseIndex: exerciseIndex,
+                  setIndex: entry.key,
+                  onCompleted: () => onSetCompleted(entry.key),
+                );
+              }),
+              // Add/remove set controls
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => ref
+                        .read(activeSessionProvider.notifier)
+                        .addSet(exerciseIndex: exerciseIndex),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Serie'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

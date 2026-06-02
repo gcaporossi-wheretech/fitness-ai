@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
 
@@ -119,11 +121,15 @@ async def test_adherence_no_data(client: AsyncClient, auth_headers: dict):
 @pytest.mark.asyncio
 async def test_adherence_with_data(seeded_client: AsyncClient, auth_headers: dict):
     """Adherence with seeded data should calculate rate correctly."""
+    # Use a window relative to now so it always covers the seeded sessions
+    # (seeded at now-14/-13/-7 days). A hardcoded month window made this test
+    # date-dependent and it broke once "now" moved past it.
+    now = datetime.now(UTC)
     response = await seeded_client.get(
         "/analytics/adherence",
         params={
-            "from": "2026-03-01T00:00:00Z",
-            "to": "2026-04-30T23:59:59Z",
+            "from": (now - timedelta(days=40)).isoformat(),
+            "to": (now + timedelta(days=1)).isoformat(),
         },
         headers=auth_headers,
     )

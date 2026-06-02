@@ -5,7 +5,7 @@ services:
   # API Gateway
   # ==========================================
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.7.1
     container_name: fitnessai-traefik
     ports:
       - "80:80"

@@ -73,5 +73,5 @@ class ApiClient {
 /// Provider for the API client singleton.
 final apiClientProvider = Provider<ApiClient>((ref) {
   final tokenStorage = ref.watch(tokenStorageProvider);
-  return ApiClient(tokenStorage: tokenStorage);
+  return ApiClient(tokenStorage: tokenStorage, baseUrl: ApiConstants.prodBaseUrl);
 });

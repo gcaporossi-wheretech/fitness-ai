@@ -56,10 +56,26 @@ class WorkoutDay {
   const WorkoutDay({
     required this.name,
     required this.exercises,
+    this.warmup = const [],
   });
 
   final String name;
   final List<PlannedExercise> exercises;
+
+  /// List of warmup items (e.g. "5 min treadmill", "Dynamic stretching").
+  final List<String> warmup;
+
+  WorkoutDay copyWith({
+    String? name,
+    List<PlannedExercise>? exercises,
+    List<String>? warmup,
+  }) {
+    return WorkoutDay(
+      name: name ?? this.name,
+      exercises: exercises ?? this.exercises,
+      warmup: warmup ?? this.warmup,
+    );
+  }
 
   factory WorkoutDay.fromJson(Map<String, dynamic> json) {
     return WorkoutDay(
@@ -67,12 +83,14 @@ class WorkoutDay {
       exercises: ((json['exercises'] ?? []) as List)
           .map((e) => PlannedExercise.fromJson(e as Map<String, dynamic>))
           .toList(),
+      warmup: ((json['warmup'] ?? []) as List).cast<String>(),
     );
   }
 
   Map<String, dynamic> toJson() => {
         'name': name,
         'exercises': exercises.map((e) => e.toJson()).toList(),
+        'warmup': warmup,
       };
 }
 

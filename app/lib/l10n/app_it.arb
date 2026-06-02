@@ -126,5 +126,23 @@
   "edit": "Modifica",
   "close": "Chiudi",
   "loading": "Caricamento...",
-  "noData": "Nessun dato disponibile"
+  "noData": "Nessun dato disponibile",
+
+  "rateWorkout": "Com'e andato l'allenamento?",
+  "tapToRate": "Tocca una stella per votare",
+  "ratingTerrible": "Pessimo",
+  "ratingPoor": "Scarso",
+  "ratingOkay": "Nella media",
+  "ratingGood": "Buono",
+  "ratingAmazing": "Fantastico!",
+  "skip": "Salta",
+  "adherence": "Aderenza",
+  "completedSessions": "Completate",
+  "plannedSessions": "Pianificate",
+  "activeWeeks": "Settimane attive",
+  "warmup": "Riscaldamento",
+  "warmupComplete": "Riscaldamento completato!",
+  "swapDay": "Sposta giorno",
+  "editPlan": "Modifica Scheda",
+  "rating": "Valutazione"
 }
