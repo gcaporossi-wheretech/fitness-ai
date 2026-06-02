@@ -55,11 +55,18 @@ class WeightProgressChart extends StatelessWidget {
     }
     final topExercises = (exerciseCounts.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value)))
-        .take(3)
+        .take(6)
         .map((e) => e.key)
         .toList();
 
-    final colors = [AppColors.primary, AppColors.success, AppColors.warning];
+    final colors = [
+      AppColors.primary,
+      AppColors.success,
+      AppColors.warning,
+      const Color(0xFFFF6B6B),
+      const Color(0xFF9B59B6),
+      const Color(0xFF1ABC9C),
+    ];
 
     final lineBarsData = <LineChartBarData>[];
     double maxY = 0;

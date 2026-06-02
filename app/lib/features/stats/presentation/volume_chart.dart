@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import 'package:fitness_ai/core/data/muscle_groups.dart';
 import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
@@ -18,7 +19,7 @@ class VolumeChart extends StatelessWidget {
     for (final session in sessions) {
       for (final ex in session.exercises) {
         if (ex.skipped) continue;
-        final group = ex.muscleGroup.isNotEmpty ? ex.muscleGroup : 'other';
+        final group = muscleGroupForExercise(ex.exerciseName, ex.muscleGroup);
         final volume = ex.sets
             .where((s) => s.completed)
             .fold<double>(0, (sum, s) => sum + (s.weight * s.actualReps));
