@@ -100,6 +100,16 @@ async def get_job_status(job_id: str) -> dict | None:
     if not data:
         return None
 
+    # Real Redis with decode_responses=True returns str keys/values, but some
+    # fakeredis versions return bytes from hgetall regardless. Normalize so the
+    # logic below (and callers) can rely on str keys.
+    data = {
+        (k.decode() if isinstance(k, bytes) else k): (
+            v.decode() if isinstance(v, bytes) else v
+        )
+        for k, v in data.items()
+    }
+
     # Parse result JSON if present
     if "result" in data and data["result"]:
         try:
