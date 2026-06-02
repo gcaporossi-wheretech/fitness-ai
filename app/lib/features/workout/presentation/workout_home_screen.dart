@@ -8,6 +8,7 @@ import 'package:fitness_ai/features/workout/domain/workout_plan.dart';
 import 'package:fitness_ai/features/workout/presentation/active_plan_provider.dart';
 import 'package:fitness_ai/features/workout/presentation/active_session_notifier.dart';
 import 'package:fitness_ai/features/workout/presentation/active_workout_screen.dart';
+import 'package:fitness_ai/features/workout/presentation/create_plan_screen.dart';
 
 /// Main workout screen: shows the active plan's days and starts a session.
 /// This is the default tab and the entry point of the app.
@@ -36,9 +37,9 @@ class WorkoutHomeScreen extends ConsumerWidget {
                 child: planAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => _EmptyState(onReload: () => _reload(ref)),
+                  error: (_, __) => _EmptyState(onReload: () => _reload(ref), onCreate: () => _create(context, ref)),
                   data: (plan) => plan == null
-                      ? _EmptyState(onReload: () => _reload(ref))
+                      ? _EmptyState(onReload: () => _reload(ref), onCreate: () => _create(context, ref))
                       : _PlanView(plan: plan),
                 ),
               ),
@@ -50,6 +51,13 @@ class WorkoutHomeScreen extends ConsumerWidget {
   }
 
   void _reload(WidgetRef ref) => ref.invalidate(activePlanProvider);
+
+  Future<void> _create(BuildContext context, WidgetRef ref) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CreatePlanScreen()),
+    );
+    ref.invalidate(activePlanProvider);
+  }
 }
 
 /// Shows the active plan and its days; tapping a day starts the workout.
@@ -126,9 +134,10 @@ class _PlanView extends ConsumerWidget {
 
 /// Shown when there is no active plan (offline with empty cache, or none yet).
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onReload});
+  const _EmptyState({required this.onReload, required this.onCreate});
 
   final VoidCallback onReload;
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -151,9 +160,15 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             GlowButton(
-              label: 'Ricarica',
+              label: 'Crea scheda',
+              onPressed: onCreate,
+              icon: Icons.add,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton.icon(
               onPressed: onReload,
-              icon: Icons.refresh,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Ricarica'),
             ),
           ],
         ),

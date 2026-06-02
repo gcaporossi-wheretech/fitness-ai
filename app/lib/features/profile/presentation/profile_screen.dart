@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fitness_ai/core/auth/webauthn.dart' as webauthn;
+import 'package:fitness_ai/core/disclaimer.dart';
 import 'package:fitness_ai/core/locale_provider.dart';
 import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
@@ -105,6 +106,10 @@ class ProfileScreen extends ConsumerWidget {
                   ? 'Face ID attivo'
                   : 'Abilita Face ID',
               onTap: () => _enableFaceId(context, ref)),
+        _menuItem(context,
+            icon: Icons.shield_outlined,
+            label: 'Disclaimer e Privacy',
+            onTap: () => showDisclaimerDialog(context)),
         const Spacer(),
         GlowButton(
           label: 'Esci',

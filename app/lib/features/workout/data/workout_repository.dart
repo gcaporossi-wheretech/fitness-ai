@@ -128,6 +128,42 @@ class WorkoutRepository {
     }
   }
 
+  /// Create a new workout plan on the server and cache it locally.
+  Future<WorkoutPlan> createPlan({
+    required String name,
+    String? description,
+    required List<WorkoutDay> days,
+  }) async {
+    try {
+      final response = await apiClient.post(
+        ApiConstants.workoutPlans,
+        data: {
+          'name': name,
+          if (description != null && description.isNotEmpty)
+            'description': description,
+          'source': 'manual',
+          'days': days
+              .map((d) => {
+                    'name': d.name,
+                    'exercises': d.exercises
+                        .map((e) => {
+                              'exercise_name': e.exerciseName,
+                              'sets': e.sets,
+                              'reps': e.reps,
+                            })
+                        .toList(),
+                  })
+              .toList(),
+        },
+      );
+      final plan = WorkoutPlan.fromJson(response.data as Map<String, dynamic>);
+      await HiveStorage.plans.put(plan.id, plan.toJson());
+      return plan;
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// Get cached plans from Hive (for offline use).
   List<WorkoutPlan> getCachedPlans() {
     return HiveStorage.plans.values
