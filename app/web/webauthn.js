@@ -22,6 +22,19 @@ window.fitnessWebAuthnSupported = function () {
   return !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
 };
 
+// Trigger a browser download of a text file (used for GDPR data export).
+window.fitnessDownload = function (filename, text) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
 // options: { challenge, rp_id, rp_name, user_id, user_name, timeout }
 window.fitnessWebAuthnRegister = async function (optionsJson) {
   const o = JSON.parse(optionsJson);

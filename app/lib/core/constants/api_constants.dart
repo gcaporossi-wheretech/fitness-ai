@@ -15,6 +15,7 @@ class ApiConstants {
   static const String authLogin = '/auth/login';
   static const String authRefresh = '/auth/refresh';
   static const String authMe = '/auth/me';
+  static const String authMeExport = '/auth/me/export';
   static const String authCredits = '/auth/credits';
   static const String authWebauthnRegisterBegin = '/auth/webauthn/register/begin';
   static const String authWebauthnRegisterComplete = '/auth/webauthn/register/complete';

@@ -102,6 +102,16 @@ class AuthRepository {
     }
   }
 
+  /// Export all user data (GDPR) as a JSON-serialisable map.
+  Future<Map<String, dynamic>> exportData() async {
+    try {
+      final response = await apiClient.get(ApiConstants.authMeExport);
+      return Map<String, dynamic>.from(response.data as Map);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// Get cached user from Hive (for offline).
   User? getCachedUser() {
     final data = HiveStorage.user.get('profile');

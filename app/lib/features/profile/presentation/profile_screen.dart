@@ -1,10 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:fitness_ai/core/auth/webauthn.dart' as webauthn;
+import 'package:fitness_ai/core/locale_provider.dart';
 import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/auth/domain/auth_state.dart';
+import 'package:fitness_ai/features/auth/domain/user.dart';
 import 'package:fitness_ai/features/auth/presentation/auth_notifier.dart';
 
 /// User profile screen with account info and settings.
@@ -14,6 +19,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authNotifierProvider);
+    final user = authState is AuthAuthenticated ? authState.user : null;
 
     return Scaffold(
       body: SafeArea(
@@ -23,13 +29,9 @@ class ProfileScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.md),
-              Text(
-                'Profilo',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
+              Text('Profilo', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: AppSpacing.lg),
-              if (authState case AuthState())
-                _buildProfileContent(context, ref, authState),
+              Expanded(child: _content(context, ref, user)),
             ],
           ),
         ),
@@ -37,93 +39,169 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileContent(
-    BuildContext context,
-    WidgetRef ref,
-    AuthState authState,
-  ) {
-    // Extract user if authenticated - for now show placeholder
-    return Expanded(
-      child: Column(
-        children: [
-          GlassmorphismCard(
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.2),
-                  child: const Icon(
-                    Icons.person,
-                    size: 30,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Utente',
+  Widget _content(BuildContext context, WidgetRef ref, User? user) {
+    final notifier = ref.read(authNotifierProvider.notifier);
+    final displayName = (user?.name?.trim().isNotEmpty ?? false)
+        ? user!.name!
+        : (user?.email ?? 'Utente');
+
+    return Column(
+      children: [
+        GlassmorphismCard(
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                child: const Icon(Icons.person, size: 30, color: AppColors.primary),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(displayName,
                         style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Row(
-                        children: [
-                          const Icon(Icons.auto_awesome,
-                              size: 16, color: AppColors.warning),
-                          const SizedBox(width: AppSpacing.xs),
-                          Text(
-                            '0 crediti AI',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
+                        overflow: TextOverflow.ellipsis),
+                    if (user?.email != null && displayName != user!.email) ...[
+                      const SizedBox(height: 2),
+                      Text(user.email,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis),
                     ],
-                  ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_awesome,
+                            size: 16, color: AppColors.warning),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text('${user?.aiCredits ?? 0} crediti AI',
+                            style: Theme.of(context).textTheme.bodyMedium),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          _buildMenuItem(
-            context,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _menuItem(context,
             icon: Icons.settings,
             label: 'Impostazioni',
-            onTap: () {},
-          ),
-          _buildMenuItem(
-            context,
+            onTap: () => _showSettings(context, user)),
+        _menuItem(context,
             icon: Icons.download,
             label: 'Esporta Dati',
-            onTap: () {},
-          ),
-          _buildMenuItem(
-            context,
+            onTap: () => _exportData(context, ref)),
+        _menuItem(context,
             icon: Icons.language,
-            label: 'Lingua',
-            onTap: () {},
-          ),
-          if (ref.read(authNotifierProvider.notifier).webauthnSupported)
-            _buildMenuItem(
-              context,
+            label: 'Lingua (${ref.watch(localeProvider).languageCode.toUpperCase()})',
+            onTap: () => _showLanguage(context, ref)),
+        if (notifier.webauthnSupported)
+          _menuItem(context,
               icon: Icons.face_retouching_natural,
-              label:
-                  ref.read(authNotifierProvider.notifier).hasWebAuthnCredential
-                      ? 'Face ID attivo'
-                      : 'Abilita Face ID',
-              onTap: () => _enableFaceId(context, ref),
-            ),
-          const Spacer(),
-          GlowButton(
-            label: 'Esci',
-            onPressed: () {
-              ref.read(authNotifierProvider.notifier).logout();
-            },
-            color: AppColors.error,
-            icon: Icons.logout,
+              label: notifier.hasWebAuthnCredential
+                  ? 'Face ID attivo'
+                  : 'Abilita Face ID',
+              onTap: () => _enableFaceId(context, ref)),
+        const Spacer(),
+        GlowButton(
+          label: 'Esci',
+          onPressed: () => ref.read(authNotifierProvider.notifier).logout(),
+          color: AppColors.error,
+          icon: Icons.logout,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+      ],
+    );
+  }
+
+  // -------- Actions --------
+
+  void _showSettings(BuildContext context, User? user) {
+    String d(DateTime? x) =>
+        x == null ? '-' : '${x.day}/${x.month}/${x.year}';
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgSecondary,
+        title: const Text('Account'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _infoRow('Email', user?.email ?? '-'),
+            _infoRow('Crediti AI', '${user?.aiCredits ?? 0}'),
+            _infoRow('Lingua', (user?.language ?? 'it').toUpperCase()),
+            _infoRow('Iscritto dal', d(user?.createdAt)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Chiudi'),
           ),
-          const SizedBox(height: AppSpacing.lg),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportData(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+        const SnackBar(content: Text('Esportazione in corso...')));
+    try {
+      final data = await ref.read(authNotifierProvider.notifier).exportData();
+      webauthn.downloadFile(
+        'fitnessai-export.json',
+        const JsonEncoder.withIndent('  ').convert(data),
+      );
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Dati esportati — download avviato'),
+        backgroundColor: AppColors.success,
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Export non riuscito: $e'),
+        backgroundColor: AppColors.error,
+      ));
+    }
+  }
+
+  void _showLanguage(BuildContext context, WidgetRef ref) {
+    final current = ref.read(localeProvider).languageCode;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        backgroundColor: AppColors.bgSecondary,
+        title: const Text('Lingua'),
+        children: [
+          _langTile(ctx, ref, 'it', 'Italiano', current),
+          _langTile(ctx, ref, 'en', 'English', current),
+        ],
+      ),
+    );
+  }
+
+  Widget _langTile(
+      BuildContext ctx, WidgetRef ref, String code, String label, String current) {
+    return SimpleDialogOption(
+      onPressed: () {
+        ref.read(localeProvider.notifier).setLanguage(code);
+        Navigator.pop(ctx);
+      },
+      child: Row(
+        children: [
+          Icon(
+            current == code
+                ? Icons.radio_button_checked
+                : Icons.radio_button_off,
+            color: AppColors.primary,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(label),
         ],
       ),
     );
@@ -155,7 +233,26 @@ class ProfileScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildMenuItem(
+  // -------- Widgets --------
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(width: AppSpacing.md),
+          Flexible(
+              child: Text(value,
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuItem(
     BuildContext context, {
     required IconData icon,
     required String label,
