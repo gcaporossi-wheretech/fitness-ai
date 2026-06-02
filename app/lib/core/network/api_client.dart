@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fitness_ai/core/constants/api_constants.dart';
@@ -73,5 +74,8 @@ class ApiClient {
 /// Provider for the API client singleton.
 final apiClientProvider = Provider<ApiClient>((ref) {
   final tokenStorage = ref.watch(tokenStorageProvider);
-  return ApiClient(tokenStorage: tokenStorage, baseUrl: ApiConstants.prodBaseUrl);
+  // On web, call the same origin the app is served from (works on any domain
+  // and keeps requests same-origin, which also satisfies WebAuthn RP ID).
+  final base = kIsWeb ? Uri.base.origin : ApiConstants.prodBaseUrl;
+  return ApiClient(tokenStorage: tokenStorage, baseUrl: base);
 });

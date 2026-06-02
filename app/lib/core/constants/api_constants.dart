@@ -8,7 +8,7 @@ class ApiConstants {
   /// Android emulator uses 10.0.2.2 for host localhost.
   /// iOS simulator uses localhost directly.
   static const String devBaseUrl = 'http://10.0.2.2';
-  static const String prodBaseUrl = 'https://54-170-27-110.sslip.io';
+  static const String prodBaseUrl = 'https://fitness-ai.caporossi.net';
 
   // Auth endpoints
   static const String authRegister = '/auth/register';
@@ -16,6 +16,9 @@ class ApiConstants {
   static const String authRefresh = '/auth/refresh';
   static const String authMe = '/auth/me';
   static const String authCredits = '/auth/credits';
+  static const String authWebauthnRegisterBegin = '/auth/webauthn/register/begin';
+  static const String authWebauthnRegisterComplete = '/auth/webauthn/register/complete';
+  static const String authWebauthnLogin = '/auth/webauthn/login';
 
   // Workout endpoints
   static const String workoutPlans = '/workouts/plans';
