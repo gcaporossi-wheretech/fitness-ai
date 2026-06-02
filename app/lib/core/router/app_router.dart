@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:fitness_ai/core/disclaimer.dart';
 import 'package:fitness_ai/features/auth/domain/auth_state.dart';
 import 'package:fitness_ai/features/auth/presentation/auth_notifier.dart';
 import 'package:fitness_ai/features/auth/presentation/login_screen.dart';
@@ -24,6 +25,16 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !disclaimerAccepted()) {
+        showDisclaimerDialog(context, gate: true);
+      }
+    });
+  }
+
   int _indexForLocation(String location) {
     if (location.startsWith('/history')) return 1;
     if (location.startsWith('/stats')) return 2;
