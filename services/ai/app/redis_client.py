@@ -104,9 +104,7 @@ async def get_job_status(job_id: str) -> dict | None:
     # fakeredis versions return bytes from hgetall regardless. Normalize so the
     # logic below (and callers) can rely on str keys.
     data = {
-        (k.decode() if isinstance(k, bytes) else k): (
-            v.decode() if isinstance(v, bytes) else v
-        )
+        (k.decode() if isinstance(k, bytes) else k): (v.decode() if isinstance(v, bytes) else v)
         for k, v in data.items()
     }
 
