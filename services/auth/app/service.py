@@ -327,8 +327,8 @@ class AuthService:
 
         return {
             "challenge": challenge,
-            "rp_id": "fitnessai.app",
-            "rp_name": "FitnessAI",
+            "rp_id": settings.webauthn_rp_id,
+            "rp_name": settings.webauthn_rp_name,
             "user_id": str(user.id),
             "user_name": user.email,
             "timeout": 60000,

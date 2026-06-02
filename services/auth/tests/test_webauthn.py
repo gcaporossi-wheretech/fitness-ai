@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from httpx import AsyncClient
 
+from app.config import settings
 from tests.conftest import register_and_get_token
 
 
@@ -20,8 +21,8 @@ async def test_webauthn_register_begin(client: AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert "challenge" in data
-    assert data["rp_id"] == "fitnessai.app"
-    assert data["rp_name"] == "FitnessAI"
+    assert data["rp_id"] == settings.webauthn_rp_id
+    assert data["rp_name"] == settings.webauthn_rp_name
     assert data["timeout"] == 60000
     assert "user_id" in data
     assert "user_name" in data

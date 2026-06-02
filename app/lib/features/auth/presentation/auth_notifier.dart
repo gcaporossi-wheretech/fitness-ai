@@ -88,6 +88,32 @@ class AuthNotifier extends Notifier<AuthState> {
     await _repo.logout();
     state = const AuthState.unauthenticated();
   }
+
+  // ============================================================
+  // WebAuthn (Face ID)
+  // ============================================================
+
+  /// Whether the browser supports Face ID / passkeys.
+  bool get webauthnSupported => _repo.webauthnSupported;
+
+  /// Whether THIS device already has Face ID enabled.
+  bool get hasWebAuthnCredential => _repo.storedWebAuthnCredentialId != null;
+
+  /// Register Face ID on this device (must be logged in). Throws on failure.
+  Future<void> enableWebAuthn() => _repo.enableWebAuthn();
+
+  /// Authenticate with Face ID.
+  Future<void> loginWebAuthn() async {
+    state = const AuthState.loading();
+    try {
+      final user = await _repo.loginWithWebAuthn();
+      state = AuthState.authenticated(user);
+    } on ApiException catch (e) {
+      state = AuthState.error(e.toString());
+    } catch (e) {
+      state = AuthState.error(e.toString());
+    }
+  }
 }
 
 /// Global auth state provider.

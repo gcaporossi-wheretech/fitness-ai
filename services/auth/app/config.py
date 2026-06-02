@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     service_name: str = "auth"
     service_port: int = 8001
 
+    # WebAuthn (Face ID / passkeys) — RP ID must match the serving domain
+    webauthn_rp_id: str = "fitness-ai.caporossi.net"
+    webauthn_rp_name: str = "FitnessAI"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

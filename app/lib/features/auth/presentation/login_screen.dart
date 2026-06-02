@@ -42,9 +42,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (mounted) setState(() => _isSubmitting = false);
   }
 
+  Future<void> _faceIdLogin() async {
+    setState(() => _isSubmitting = true);
+    await ref.read(authNotifierProvider.notifier).loginWebAuthn();
+    if (mounted) setState(() => _isSubmitting = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = S.of(context)!;
+    final auth = ref.read(authNotifierProvider.notifier);
+    final showFaceId = auth.webauthnSupported && auth.hasWebAuthnCredential;
 
     // Show error snackbar when auth fails
     ref.listen<AuthState>(authNotifierProvider, (prev, next) {
@@ -132,6 +140,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   enabled: !_isSubmitting,
                   icon: Icons.login,
                 ),
+                if (showFaceId) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton.icon(
+                    onPressed: _isSubmitting ? null : _faceIdLogin,
+                    icon: const Icon(Icons.face_retouching_natural),
+                    label: const Text('Accedi con Face ID'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 TextButton(
                   onPressed: () => context.go('/register'),

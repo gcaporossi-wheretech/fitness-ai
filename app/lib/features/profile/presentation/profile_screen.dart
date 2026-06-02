@@ -104,6 +104,16 @@ class ProfileScreen extends ConsumerWidget {
             label: 'Lingua',
             onTap: () {},
           ),
+          if (ref.read(authNotifierProvider.notifier).webauthnSupported)
+            _buildMenuItem(
+              context,
+              icon: Icons.face_retouching_natural,
+              label:
+                  ref.read(authNotifierProvider.notifier).hasWebAuthnCredential
+                      ? 'Face ID attivo'
+                      : 'Abilita Face ID',
+              onTap: () => _enableFaceId(context, ref),
+            ),
           const Spacer(),
           GlowButton(
             label: 'Esci',
@@ -117,6 +127,32 @@ class ProfileScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _enableFaceId(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(authNotifierProvider.notifier);
+    if (notifier.hasWebAuthnCredential) {
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Face ID è già attivo su questo dispositivo'),
+      ));
+      return;
+    }
+    messenger.showSnackBar(const SnackBar(
+      content: Text('Conferma con il volto / impronta...'),
+    ));
+    try {
+      await notifier.enableWebAuthn();
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Face ID attivato! Ora puoi accedere col volto.'),
+        backgroundColor: AppColors.success,
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Face ID non attivato: $e'),
+        backgroundColor: AppColors.error,
+      ));
+    }
   }
 
   Widget _buildMenuItem(
