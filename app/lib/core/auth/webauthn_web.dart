@@ -10,6 +10,14 @@ external JSPromise<JSString> _register(JSString optionsJson);
 @JS('fitnessWebAuthnAuthenticate')
 external JSPromise<JSString> _authenticate(JSString optionsJson);
 
+@JS('fitnessDownload')
+external void _download(JSString filename, JSString text);
+
+/// Trigger a browser download of [text] as [filename].
+void downloadFile(String filename, String text) {
+  _download(filename.toJS, text.toJS);
+}
+
 /// Whether the browser exposes a usable WebAuthn platform authenticator.
 bool webauthnSupported() {
   try {

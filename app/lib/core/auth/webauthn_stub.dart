@@ -7,3 +7,7 @@ Future<Map<String, dynamic>> webauthnRegister(Map<String, dynamic> options) =>
 
 Future<Map<String, dynamic>> webauthnAuthenticate(Map<String, dynamic> options) =>
     throw UnsupportedError('WebAuthn is only available on the web build');
+
+void downloadFile(String filename, String text) {
+  throw UnsupportedError('File download is only available on the web build');
+}

@@ -99,6 +99,9 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Whether THIS device already has Face ID enabled.
   bool get hasWebAuthnCredential => _repo.storedWebAuthnCredentialId != null;
 
+  /// Export all user data (GDPR) as a JSON-serialisable map.
+  Future<Map<String, dynamic>> exportData() => _repo.exportData();
+
   /// Register Face ID on this device (must be logged in). Throws on failure.
   Future<void> enableWebAuthn() => _repo.enableWebAuthn();
 
