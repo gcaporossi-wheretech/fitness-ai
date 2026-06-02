@@ -8,7 +8,7 @@ class ApiConstants {
   /// Android emulator uses 10.0.2.2 for host localhost.
   /// iOS simulator uses localhost directly.
   static const String devBaseUrl = 'http://10.0.2.2';
-  static const String prodBaseUrl = 'https://api.fitnessai.app';
+  static const String prodBaseUrl = 'https://54-170-27-110.sslip.io';
 
   // Auth endpoints
   static const String authRegister = '/auth/register';

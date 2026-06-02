@@ -10,6 +10,9 @@ version: "3.9"
 
 services:
   traefik:
+    environment:
+      # Docker Engine 25+ rejects old API negotiation; pin a modern API version
+      - DOCKER_API_VERSION=1.44
     ports:
       - "80:80"
       - "443:443"
@@ -77,6 +80,27 @@ services:
   redis:
     # Production: no port exposed to host
     ports: []
+
+  # ==========================================
+  # Flutter Web PWA (static, served at root)
+  # ==========================================
+  pwa:
+    image: nginx:1.27-alpine
+    container_name: fitnessai-pwa
+    volumes:
+      - ./webapp:/usr/share/nginx/html:ro
+      - ./infra/nginx/pwa.conf:/etc/nginx/conf.d/default.conf:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pwa.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.pwa.entrypoints=websecure"
+      - "traefik.http.routers.pwa.tls=true"
+      - "traefik.http.routers.pwa.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.pwa.priority=1"
+      - "traefik.http.services.pwa.loadbalancer.server.port=80"
+    networks:
+      - fitnessai
+    restart: unless-stopped
 
 volumes:
   letsencrypt:
