@@ -17,6 +17,10 @@ class Settings(BaseSettings):
 
     # Anthropic
     anthropic_api_key: str = ""
+    # Claude model for vision + coach (override via CLAUDE_MODEL in .env).
+    # e.g. claude-opus-4-8 (max quality), claude-sonnet-4-6 (balanced),
+    # claude-haiku-4-5-20251001 (cheapest).
+    claude_model: str = "claude-sonnet-4-6"
 
     # Redis (cache + job queue)
     redis_url: str = "redis://redis:6379/0"

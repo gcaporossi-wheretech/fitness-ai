@@ -21,7 +21,7 @@ class CoachResult {
       days: ((json['days'] ?? []) as List)
           .map((d) => WorkoutDay.fromJson(d as Map<String, dynamic>))
           .toList(),
-      notes: json['notes'] as String?,
+      notes: (json['notes'] ?? json['progression_notes']) as String?,
     );
   }
 

@@ -5,6 +5,8 @@ import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/ai/domain/coach_result.dart';
+import 'package:fitness_ai/features/workout/data/workout_repository.dart';
+import 'package:fitness_ai/features/workout/presentation/active_plan_provider.dart';
 
 /// Screen showing the AI-generated workout plan.
 /// Allows the user to review, save, or modify the plan.
@@ -87,9 +89,26 @@ class CoachResultScreen extends ConsumerWidget {
                 children: [
                   GlowButton(
                     label: 'Salva Scheda',
-                    onPressed: () {
-                      // TODO: Save plan via API and navigate back
-                      Navigator.of(context).pop();
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final navigator = Navigator.of(context);
+                      try {
+                        await ref.read(workoutRepositoryProvider).createPlan(
+                              name: result.planName,
+                              days: result.days,
+                            );
+                        ref.invalidate(activePlanProvider);
+                        messenger.showSnackBar(const SnackBar(
+                          content: Text('Scheda salvata!'),
+                          backgroundColor: AppColors.success,
+                        ));
+                        navigator.popUntil((r) => r.isFirst);
+                      } catch (e) {
+                        messenger.showSnackBar(SnackBar(
+                          content: Text('Errore nel salvataggio: $e'),
+                          backgroundColor: AppColors.error,
+                        ));
+                      }
                     },
                     icon: Icons.save,
                     color: AppColors.success,

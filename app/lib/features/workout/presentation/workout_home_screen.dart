@@ -9,6 +9,8 @@ import 'package:fitness_ai/features/workout/presentation/active_plan_provider.da
 import 'package:fitness_ai/features/workout/presentation/active_session_notifier.dart';
 import 'package:fitness_ai/features/workout/presentation/active_workout_screen.dart';
 import 'package:fitness_ai/features/workout/presentation/create_plan_screen.dart';
+import 'package:fitness_ai/features/ai/presentation/coach_onboarding_screen.dart';
+import 'package:fitness_ai/features/ai/presentation/vision_scan_screen.dart';
 
 /// Main workout screen: shows the active plan's days and starts a session.
 /// This is the default tab and the entry point of the app.
@@ -32,6 +34,8 @@ class WorkoutHomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text('Oggi', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(height: AppSpacing.md),
+              const _AiActions(),
               const SizedBox(height: AppSpacing.lg),
               Expanded(
                 child: planAsync.when(
@@ -172,6 +176,89 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Two entry points to the AI features (Coach generation + equipment scan).
+class _AiActions extends StatelessWidget {
+  const _AiActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _AiCard(
+            icon: Icons.auto_awesome,
+            label: 'Coach AI',
+            subtitle: 'Genera scheda',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CoachOnboardingScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _AiCard(
+            icon: Icons.camera_alt,
+            label: 'Scansiona',
+            subtitle: 'Riconosci attrezzo',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const VisionScanScreen()),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AiCard extends StatelessWidget {
+  const _AiCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassmorphismCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      borderColor: AppColors.primary.withValues(alpha: 0.25),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primary, size: 26),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
