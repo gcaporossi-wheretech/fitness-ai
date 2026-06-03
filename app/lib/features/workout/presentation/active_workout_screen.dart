@@ -243,7 +243,7 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                   final exIndex = index - warmupOffset;
                   if (exIndex == session.exercises.length) {
                     return _AddExerciseButton(
-                      onAdd: () => _showAddExerciseDialog(),
+                      onAdd: _addExercise,
                     );
                   }
                   return _ExerciseCard(
@@ -290,85 +290,17 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     );
   }
 
-  void _showAddExerciseDialog() {
-    final nameController = TextEditingController();
-    final nameFocus = FocusNode();
-    final setsController = TextEditingController(text: '3');
-    final repsController = TextEditingController(text: '10');
+  Future<void> _addExercise() async {
+    // Pick from existing exercises (consistent names) or create a new one
+    // explicitly — avoids typing a slightly different name by mistake.
     final known = ref.read(knownExerciseNamesProvider);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.bgSecondary,
-        title: const Text('Aggiungi esercizio'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ExerciseNameField(
-                controller: nameController,
-                focusNode: nameFocus,
-                known: known,
-                labelText: 'Nome esercizio',
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: setsController,
-                      keyboardType: TextInputType.number,
-                      onTap: () => setsController.selection = TextSelection(
-                          baseOffset: 0,
-                          extentOffset: setsController.text.length),
-                      decoration: const InputDecoration(labelText: 'Serie'),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: TextField(
-                      controller: repsController,
-                      keyboardType: TextInputType.number,
-                      onTap: () => repsController.selection = TextSelection(
-                          baseOffset: 0,
-                          extentOffset: repsController.text.length),
-                      decoration: const InputDecoration(labelText: 'Reps'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              const Text(
-                'Potrai aggiungere altre serie con "+ Serie" durante l\'esercizio.',
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Annulla'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (nameController.text.trim().isNotEmpty) {
-                ref.read(activeSessionProvider.notifier).addCustomExercise(
-                      name: nameController.text.trim(),
-                      sets: int.tryParse(setsController.text) ?? 3,
-                      reps: int.tryParse(repsController.text) ?? 10,
-                    );
-              }
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Aggiungi',
-                style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
+    final name = await showExercisePicker(context, known);
+    if (name == null || name.trim().isEmpty) return;
+    ref.read(activeSessionProvider.notifier).addCustomExercise(
+          name: name.trim(),
+          sets: 3,
+          reps: 10,
+        );
   }
 }
 
