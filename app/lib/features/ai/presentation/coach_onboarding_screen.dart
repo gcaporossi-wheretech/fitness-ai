@@ -9,6 +9,7 @@ import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/ai/data/ai_repository.dart';
 import 'package:fitness_ai/features/ai/presentation/coach_result_screen.dart';
+import 'package:fitness_ai/features/workout/data/workout_repository.dart';
 import 'package:fitness_ai/features/auth/presentation/auth_notifier.dart';
 import 'package:fitness_ai/features/auth/domain/auth_state.dart';
 
@@ -142,6 +143,7 @@ class _CoachOnboardingScreenState
         photos.add((bytes: _sidePhoto!, filename: 'side.jpg'));
       }
 
+      final known = ref.read(knownExerciseNamesProvider);
       final userData = <String, dynamic>{
         if (int.tryParse(_ageController.text) != null)
           'age': int.parse(_ageController.text),
@@ -149,6 +151,7 @@ class _CoachOnboardingScreenState
         'available_days': _frequency,
         if (_limitationsController.text.trim().isNotEmpty)
           'limitations': _limitationsController.text.trim(),
+        if (known.isNotEmpty) 'known_exercises': known.take(150).toList(),
       };
 
       final aiRepo = ref.read(aiRepositoryProvider);

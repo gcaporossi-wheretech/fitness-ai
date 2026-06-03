@@ -88,7 +88,8 @@ class WorkoutDay {
 
   factory WorkoutDay.fromJson(Map<String, dynamic> json) {
     return WorkoutDay(
-      name: json['name'] as String,
+      // Server plans use `name`; AI-coach output uses `day_name`.
+      name: (json['name'] ?? json['day_name'] ?? 'Giorno').toString(),
       exercises: ((json['exercises'] ?? []) as List)
           .map((e) => PlannedExercise.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),

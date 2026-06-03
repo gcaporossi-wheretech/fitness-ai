@@ -21,7 +21,7 @@ class HistoryRepository {
     final out = <WorkoutSession>[];
     for (final m in HiveStorage.sessions.values) {
       try {
-        final s = WorkoutSession.fromJson(Map<String, dynamic>.from(m as Map));
+        final s = WorkoutSession.fromJson(Map<String, dynamic>.from(m));
         if (s.isCompleted) out.add(s);
       } catch (_) {
         // skip corrupt/incompatible cached record
