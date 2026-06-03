@@ -46,6 +46,48 @@ class CoachResultScreen extends ConsumerWidget {
                       result.description,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    if (result.assessment != null &&
+                        result.assessment!.trim().isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      GlassmorphismCard(
+                        borderColor: AppColors.primary.withValues(alpha: 0.25),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.assignment_ind,
+                                    color: AppColors.primary, size: 18),
+                                SizedBox(width: AppSpacing.sm),
+                                Text('La tua situazione e obiettivo',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w700)),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(result.assessment!,
+                                style: Theme.of(context).textTheme.bodyMedium),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (result.photoReviewWeeks != null &&
+                        result.photoReviewWeeks! > 0) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Row(
+                        children: [
+                          const Icon(Icons.photo_camera,
+                              color: AppColors.warning, size: 18),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              'Rifai le foto tra ${result.photoReviewWeeks} settimane per valutare i progressi e aggiornare la scheda.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (result.notes != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       GlassmorphismCard(

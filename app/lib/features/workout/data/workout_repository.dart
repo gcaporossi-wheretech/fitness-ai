@@ -42,7 +42,7 @@ class WorkoutRepository {
     final out = <WorkoutSession>[];
     for (final m in HiveStorage.sessions.values) {
       try {
-        out.add(WorkoutSession.fromJson(Map<String, dynamic>.from(m as Map)));
+        out.add(WorkoutSession.fromJson(Map<String, dynamic>.from(m)));
       } catch (_) {
         // skip corrupt/incompatible cached record
       }
@@ -182,7 +182,7 @@ class WorkoutRepository {
     final out = <WorkoutPlan>[];
     for (final m in HiveStorage.plans.values) {
       try {
-        out.add(WorkoutPlan.fromJson(Map<String, dynamic>.from(m as Map)));
+        out.add(WorkoutPlan.fromJson(Map<String, dynamic>.from(m)));
       } catch (_) {
         // skip corrupt/incompatible cached record
       }
@@ -225,4 +225,31 @@ class WorkoutRepository {
 /// Provider for workout repository.
 final workoutRepositoryProvider = Provider<WorkoutRepository>((ref) {
   return WorkoutRepository(apiClient: ref.watch(apiClientProvider));
+});
+
+/// Known exercise names (from the user's history + the exercises catalog),
+/// deduplicated case-insensitively and sorted. Used to suggest a consistent
+/// name when creating plans / adding exercises, so the same exercise always
+/// gets the same name (pre-fill and charts key on the name).
+final knownExerciseNamesProvider = Provider<List<String>>((ref) {
+  final repo = ref.watch(workoutRepositoryProvider);
+  final seen = <String>{}; // lowercase keys
+  final names = <String>[];
+  void add(String raw) {
+    final name = raw.trim();
+    if (name.isEmpty) return;
+    final key = name.toLowerCase();
+    if (seen.add(key)) names.add(name);
+  }
+
+  for (final s in repo.getAllLocalSessions()) {
+    for (final e in s.exercises) {
+      add(e.exerciseName);
+    }
+  }
+  for (final ex in repo.getCachedExercises()) {
+    add(ex.name);
+  }
+  names.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  return names;
 });

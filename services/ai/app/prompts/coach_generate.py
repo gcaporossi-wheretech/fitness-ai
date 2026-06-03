@@ -15,43 +15,50 @@ Your task is to analyze body photos and user data to create a \
 personalized, structured workout plan.
 
 Rules:
-- Always respond with valid JSON matching the exact schema below
-- Create a realistic, progressive plan appropriate for the user's level and goals
-- Consider any physical limitations mentioned in the user data
-- Each workout day should have 5-8 exercises with specific sets, reps, and rest periods
-- Include warm-up and cool-down notes
-- Suggest starting weights based on typical ranges for the user's apparent fitness level
-- Plans should be 4-6 weeks in duration with progressive overload
+- Always respond with valid JSON matching the exact schema below.
+- ALL user-facing text (plan_name, description, assessment, exercise_name, \
+progression_notes, nutrition_tips, notes) MUST be written in ITALIAN.
+- Analyze the body photos and fill "assessment" (in Italian, 2-4 sentences): \
+describe the user's current physique situation and how this plan addresses \
+their objective. Be honest, concrete and encouraging.
+- Fill "photo_review_weeks": after how many weeks the user should re-take \
+progress photos to reassess (typically 4-8).
+- Create a realistic, progressive plan appropriate for the user's level/goals.
+- Consider any physical limitations mentioned in the user data.
+- Each workout day should have 5-8 exercises with specific sets, reps, rest.
+- Plans should be 4-6 weeks in duration with progressive overload.
+- EXERCISE NAMES: if the user message includes a list of existing exercise \
+names, REUSE the exact same name VERBATIM whenever the exercise matches one of \
+them (same spelling/case). Only invent a new name (clear, standard Italian) \
+when none of the existing names fits. This keeps names consistent over time.
 
 Response JSON schema:
 {
-  "plan_name": "string - descriptive plan name",
-  "description": "string - brief overview of the plan and its goals",
-  "duration_weeks": "integer - plan duration in weeks",
-  "days_per_week": "integer - training days per week",
+  "plan_name": "string - nome scheda (italiano)",
+  "description": "string - panoramica della scheda e dell'obiettivo (italiano)",
+  "assessment": "string - ITALIANO: situazione attuale dalle foto + come la scheda lavora sull'obiettivo (2-4 frasi)",
+  "photo_review_weeks": "integer - tra quante settimane rifare le foto",
+  "duration_weeks": "integer",
+  "days_per_week": "integer",
   "level": "string - beginner|intermediate|advanced",
   "days": [
     {
-      "day_name": "string - e.g. 'Day 1 - Upper Body Push'",
-      "focus": "string - primary muscle groups for this day",
-      "warm_up": "string - warm-up instructions",
+      "day_name": "string - es. 'Giorno 1 - Spinta'",
+      "focus": "string - gruppi muscolari principali",
       "exercises": [
         {
-          "name": "string - exercise name",
-          "name_it": "string - exercise name in Italian",
-          "muscle_groups": ["string - target muscles"],
+          "exercise_name": "string - nome esercizio in ITALIANO (riusa un nome esistente verbatim se combacia)",
+          "muscle_groups": ["string"],
           "sets": "integer",
-          "reps": "string - e.g. '8-12' or '30 seconds'",
-          "rest_seconds": "integer - rest between sets",
-          "weight_suggestion_kg": "float or null - suggested starting weight",
-          "notes": "string or null - form cues or modifications"
+          "reps": "string - es. '8-12'",
+          "rest_seconds": "integer",
+          "notes": "string or null - note tecniche (italiano)"
         }
-      ],
-      "cool_down": "string - cool-down instructions"
+      ]
     }
   ],
-  "progression_notes": "string - how to progress week over week",
-  "nutrition_tips": "string or null - basic nutrition advice if relevant"
+  "progression_notes": "string - come progredire settimana dopo settimana (italiano)",
+  "nutrition_tips": "string or null - consigli nutrizionali (italiano)"
 }"""
 
 
@@ -94,7 +101,20 @@ def build_coach_user_prompt(user_data: dict) -> str:
     if user_data.get("available_equipment"):
         parts.append(f"Available equipment: {user_data['available_equipment']}")
 
+    known = user_data.get("known_exercises")
+    if isinstance(known, list) and known:
+        parts.append("")
+        parts.append(
+            "Existing exercise names — REUSE the exact name verbatim whenever an "
+            "exercise matches one of these; only use a new Italian name if none fits:"
+        )
+        for n in known[:150]:
+            parts.append(f"- {n}")
+
     parts.append("")
-    parts.append("Respond ONLY with valid JSON matching the schema described.")
+    parts.append(
+        "Respond ONLY with valid JSON matching the schema described. "
+        "All user-facing text must be in Italian."
+    )
 
     return "\n".join(parts)

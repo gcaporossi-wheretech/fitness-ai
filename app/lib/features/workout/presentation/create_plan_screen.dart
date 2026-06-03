@@ -7,13 +7,16 @@ import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/workout/data/workout_repository.dart';
 import 'package:fitness_ai/features/workout/domain/workout_plan.dart';
 import 'package:fitness_ai/features/workout/presentation/active_plan_provider.dart';
+import 'package:fitness_ai/features/workout/presentation/exercise_name_field.dart';
 
 class _ExDraft {
   final name = TextEditingController();
+  final nameFocus = FocusNode();
   final sets = TextEditingController(text: '3');
   final reps = TextEditingController(text: '10');
   void dispose() {
     name.dispose();
+    nameFocus.dispose();
     sets.dispose();
     reps.dispose();
   }
@@ -214,9 +217,10 @@ class _CreatePlanScreenState extends ConsumerState<CreatePlanScreen> {
         children: [
           Expanded(
             flex: 5,
-            child: TextField(
+            child: ExerciseNameField(
               controller: ex.name,
-              decoration: const InputDecoration(hintText: 'Esercizio'),
+              focusNode: ex.nameFocus,
+              known: ref.read(knownExerciseNamesProvider),
             ),
           ),
           const SizedBox(width: 6),

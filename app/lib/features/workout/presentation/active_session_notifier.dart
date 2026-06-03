@@ -70,24 +70,38 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
   /// Start a new session from a workout day plan.
   /// Pre-fills weights from the last completed session for the same day.
   void startSession(WorkoutDay day, {String? planId}) {
-    // Find previous session for this day to pre-fill weights
-    final allSessions = _repo.getAllLocalSessions();
-    final previousSession = allSessions
-        .where((s) =>
-            s.isCompleted && s.dayName == day.name && s.planId == planId)
+    // Pre-fill weights from the most recent time each exercise was performed,
+    // across the whole history (independent of day name / plan), matching by
+    // exercise name. This keeps pre-fill working even after renaming days or
+    // switching plans.
+    final completed = _repo
+        .getAllLocalSessions() // newest-first
+        .where((s) => s.isCompleted)
         .toList();
-    final previous = previousSession.isNotEmpty ? previousSession.first : null;
+
+    String norm(String s) => s.trim().toLowerCase();
+
+    ExerciseLog? lastExerciseNamed(String name) {
+      final target = norm(name);
+      for (final s in completed) {
+        for (final e in s.exercises) {
+          if (norm(e.exerciseName) == target &&
+              e.sets.any((st) => st.completed && st.weight > 0)) {
+            return e;
+          }
+        }
+      }
+      return null;
+    }
 
     final exercises = day.exercises.map((ep) {
       final repsInt = int.tryParse(ep.reps) ?? 10;
-
-      // Find matching exercise from last session
-      ExerciseLog? prevExercise;
-      if (previous != null) {
-        final matches = previous.exercises
-            .where((e) => e.exerciseName == ep.exerciseName);
-        if (matches.isNotEmpty) prevExercise = matches.first;
-      }
+      final prevExercise = lastExerciseNamed(ep.exerciseName);
+      final lastWeighted = prevExercise == null
+          ? const <SetLog>[]
+          : prevExercise.sets
+              .where((s) => s.completed && s.weight > 0)
+              .toList();
 
       return ExerciseLog(
         exerciseId: ep.exerciseId ?? '',
@@ -95,19 +109,16 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
         exerciseType: ep.exerciseType,
         restSeconds: ep.restSeconds,
         sets: List.generate(ep.sets, (i) {
-          // Pre-fill weight from last session's corresponding set
+          // Use the matching set index if available, otherwise the last
+          // weighted set from that exercise's most recent session.
           double prefillWeight = 0;
-          if (prevExercise != null && i < prevExercise.sets.length) {
-            final prevSet = prevExercise.sets[i];
-            if (prevSet.completed && prevSet.weight > 0) {
-              prefillWeight = prevSet.weight;
-            }
-          } else if (prevExercise != null && prevExercise.sets.isNotEmpty) {
-            // Use last available completed set weight
-            final lastCompleted =
-                prevExercise.sets.where((s) => s.completed && s.weight > 0);
-            if (lastCompleted.isNotEmpty) {
-              prefillWeight = lastCompleted.last.weight;
+          if (prevExercise != null) {
+            if (i < prevExercise.sets.length &&
+                prevExercise.sets[i].completed &&
+                prevExercise.sets[i].weight > 0) {
+              prefillWeight = prevExercise.sets[i].weight;
+            } else if (lastWeighted.isNotEmpty) {
+              prefillWeight = lastWeighted.last.weight;
             }
           }
           return SetLog(

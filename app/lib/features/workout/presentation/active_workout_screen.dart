@@ -10,7 +10,9 @@ import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/workout/domain/exercise_log.dart';
 import 'package:fitness_ai/features/workout/domain/workout_session.dart';
+import 'package:fitness_ai/features/workout/data/workout_repository.dart';
 import 'package:fitness_ai/features/workout/presentation/active_session_notifier.dart';
+import 'package:fitness_ai/features/workout/presentation/exercise_name_field.dart';
 import 'package:fitness_ai/features/workout/presentation/rest_timer_overlay.dart';
 import 'package:fitness_ai/features/workout/presentation/set_input_row.dart';
 
@@ -290,8 +292,10 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
 
   void _showAddExerciseDialog() {
     final nameController = TextEditingController();
+    final nameFocus = FocusNode();
     final setsController = TextEditingController(text: '3');
     final repsController = TextEditingController(text: '10');
+    final known = ref.read(knownExerciseNamesProvider);
 
     showDialog(
       context: context,
@@ -302,11 +306,11 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
+              ExerciseNameField(
                 controller: nameController,
-                autofocus: true,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(labelText: 'Nome esercizio'),
+                focusNode: nameFocus,
+                known: known,
+                labelText: 'Nome esercizio',
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(

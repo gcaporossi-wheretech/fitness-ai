@@ -72,6 +72,8 @@ class CoachGenerateSyncResponse(BaseModel):
 
     plan_name: str
     description: str
+    assessment: str | None = None
+    photo_review_weeks: int | None = None
     duration_weeks: int | None = None
     days_per_week: int | None = None
     level: str | None = None
