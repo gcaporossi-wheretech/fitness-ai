@@ -199,7 +199,9 @@ class _SetInputRowState extends ConsumerState<SetInputRow> {
 }
 
 /// Compact number input for the set row.
-class _CompactInput extends StatelessWidget {
+/// Selects all existing text when focused/tapped so a value can be typed
+/// over immediately (Strong-style).
+class _CompactInput extends StatefulWidget {
   const _CompactInput({
     required this.controller,
     this.enabled = true,
@@ -211,18 +213,54 @@ class _CompactInput extends StatelessWidget {
   final String? suffix;
 
   @override
+  State<_CompactInput> createState() => _CompactInputState();
+}
+
+class _CompactInputState extends State<_CompactInput> {
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) _selectAll();
+  }
+
+  void _selectAll() {
+    final text = widget.controller.text;
+    if (text.isEmpty) return;
+    widget.controller.selection =
+        TextSelection(baseOffset: 0, extentOffset: text.length);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: TextField(
-        controller: controller,
-        enabled: enabled,
+        controller: widget.controller,
+        focusNode: _focusNode,
+        enabled: widget.enabled,
+        onTap: _selectAll,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: enabled ? AppColors.textPrimary : AppColors.textSecondary,
+          color: widget.enabled
+              ? AppColors.textPrimary
+              : AppColors.textSecondary,
         ),
         decoration: InputDecoration(
           isDense: true,
@@ -231,14 +269,14 @@ class _CompactInput extends StatelessWidget {
             horizontal: AppSpacing.xs,
           ),
           filled: true,
-          fillColor: enabled
+          fillColor: widget.enabled
               ? AppColors.bgElevated.withValues(alpha: 0.5)
               : Colors.transparent,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
             borderSide: BorderSide.none,
           ),
-          suffixText: suffix,
+          suffixText: widget.suffix,
           suffixStyle: const TextStyle(
             color: AppColors.textSecondary,
             fontSize: 12,

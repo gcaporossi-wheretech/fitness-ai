@@ -70,7 +70,11 @@ class WorkoutRepository {
               .map((e) => e.toApiJson())
               .toList(),
           'notes': session.notes.isNotEmpty ? session.notes : null,
-          'rating': session.rating > 0 ? session.rating : null,
+          'overall_rating':
+              session.overallRating > 0 ? session.overallRating : null,
+          'fatigue_rating':
+              session.fatigueRating > 0 ? session.fatigueRating : null,
+          'pump_rating': session.pumpRating > 0 ? session.pumpRating : null,
         },
       );
       // Mark as synced locally
@@ -145,6 +149,7 @@ class WorkoutRepository {
           'days': days
               .map((d) => {
                     'name': d.name,
+                    if (d.warmup.isNotEmpty) 'warmup': d.warmup,
                     'exercises': d.exercises
                         .map((e) => {
                               'exercise_name': e.exerciseName,

@@ -235,6 +235,9 @@ async def create_session(
             completed_at=request.completed_at,
             duration_seconds=request.duration_seconds,
             notes=request.notes,
+            overall_rating=request.overall_rating,
+            fatigue_rating=request.fatigue_rating,
+            pump_rating=request.pump_rating,
         )
     except DuplicateClientIdError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
@@ -275,6 +278,9 @@ async def sync_sessions(
             "duration_seconds": s.duration_seconds,
             "exercises": [ex.model_dump() for ex in s.exercises],
             "notes": s.notes,
+            "overall_rating": s.overall_rating,
+            "fatigue_rating": s.fatigue_rating,
+            "pump_rating": s.pump_rating,
             "client_id": s.client_id,
         }
         for s in request.sessions

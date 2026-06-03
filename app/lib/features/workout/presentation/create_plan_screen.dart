@@ -22,9 +22,11 @@ class _ExDraft {
 class _DayDraft {
   _DayDraft(String initialName) : name = TextEditingController(text: initialName);
   final TextEditingController name;
+  final TextEditingController warmup = TextEditingController();
   final List<_ExDraft> exercises = [_ExDraft()];
   void dispose() {
     name.dispose();
+    warmup.dispose();
     for (final e in exercises) {
       e.dispose();
     }
@@ -89,8 +91,15 @@ class _CreatePlanScreenState extends ConsumerState<CreatePlanScreen> {
       }
       if (exs.isNotEmpty) {
         final dayName = d.name.text.trim();
+        final warmup = d.warmup.text
+            .split('\n')
+            .map((l) => l.trim())
+            .where((l) => l.isNotEmpty)
+            .toList();
         days.add(WorkoutDay(
-            name: dayName.isEmpty ? 'Giorno' : dayName, exercises: exs));
+            name: dayName.isEmpty ? 'Giorno' : dayName,
+            exercises: exs,
+            warmup: warmup));
       }
     }
     if (days.isEmpty) {
@@ -175,6 +184,16 @@ class _CreatePlanScreenState extends ConsumerState<CreatePlanScreen> {
                       color: AppColors.error),
                 ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: day.warmup,
+            minLines: 1,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Riscaldamento (una voce per riga, opzionale)',
+              hintText: '5 min cardio\nMobilità spalle',
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           ...day.exercises.asMap().entries.map((e) => _exRow(dayIdx, e.key, e.value)),

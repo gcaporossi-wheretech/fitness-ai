@@ -12,7 +12,9 @@ class WorkoutSession {
     this.durationSeconds,
     this.notes = '',
     this.synced = false,
-    this.rating = 0,
+    this.overallRating = 0,
+    this.fatigueRating = 0,
+    this.pumpRating = 0,
   });
 
   final String id;
@@ -25,8 +27,14 @@ class WorkoutSession {
   final String notes;
   final bool synced;
 
-  /// Session rating 1-5 stars (0 = not rated).
-  final int rating;
+  /// Overall workout quality, 1-5 (0 = not rated).
+  final int overallRating;
+
+  /// Perceived fatigue, 1-5 (0 = not rated).
+  final int fatigueRating;
+
+  /// Pump sensation, 1-5 (0 = not rated).
+  final int pumpRating;
 
   bool get isCompleted => completedAt != null;
 
@@ -68,7 +76,9 @@ class WorkoutSession {
     List<ExerciseLog>? exercises,
     String? notes,
     bool? synced,
-    int? rating,
+    int? overallRating,
+    int? fatigueRating,
+    int? pumpRating,
   }) {
     return WorkoutSession(
       id: id ?? this.id,
@@ -80,7 +90,9 @@ class WorkoutSession {
       exercises: exercises ?? this.exercises,
       notes: notes ?? this.notes,
       synced: synced ?? this.synced,
-      rating: rating ?? this.rating,
+      overallRating: overallRating ?? this.overallRating,
+      fatigueRating: fatigueRating ?? this.fatigueRating,
+      pumpRating: pumpRating ?? this.pumpRating,
     );
   }
 
@@ -103,7 +115,11 @@ class WorkoutSession {
           .toList(),
       notes: (json['notes'] ?? '') as String,
       synced: (json['synced'] ?? false) as bool,
-      rating: (json['rating'] ?? json['session_rating'] ?? 0) as int,
+      // Backward compatible: old sessions stored a single `rating` (overall).
+      overallRating:
+          (json['overall_rating'] ?? json['rating'] ?? 0) as int,
+      fatigueRating: (json['fatigue_rating'] ?? 0) as int,
+      pumpRating: (json['pump_rating'] ?? 0) as int,
     );
   }
 
@@ -117,6 +133,8 @@ class WorkoutSession {
         'exercises': exercises.map((e) => e.toJson()).toList(),
         'notes': notes,
         'synced': synced,
-        'rating': rating,
+        'overall_rating': overallRating,
+        'fatigue_rating': fatigueRating,
+        'pump_rating': pumpRating,
       };
 }

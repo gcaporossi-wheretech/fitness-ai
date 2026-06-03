@@ -1,3 +1,12 @@
+/// Default warm-up checklist shown when a day has no warm-up defined,
+/// so the warm-up section is always available during a workout.
+const List<String> kDefaultWarmup = [
+  '5 min cardio leggero',
+  'Mobilità articolare',
+  'Stretching dinamico',
+  '1-2 serie di avvicinamento',
+];
+
 /// A workout plan with days and exercises.
 class WorkoutPlan {
   const WorkoutPlan({

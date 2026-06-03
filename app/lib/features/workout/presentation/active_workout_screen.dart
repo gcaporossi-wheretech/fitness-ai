@@ -28,7 +28,6 @@ class ActiveWorkoutScreen extends ConsumerStatefulWidget {
 
 class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
   final _restTimer = RestTimerService();
-  bool _showTimer = false;
   String? _lastExerciseName;
   int? _lastSetNumber;
   int? _lastTotalSets;
@@ -52,7 +51,9 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     _lastTotalSets = exercise.sets.length;
     if (exercise.restSeconds > 0) {
       _restTimer.start(exercise.restSeconds);
-      setState(() => _showTimer = true);
+      // Rebuild so the persistent timer bar picks up the new set labels;
+      // it keeps itself updated afterwards via the timer's notifications.
+      setState(() {});
     }
   }
 
@@ -64,9 +65,11 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     _showRatingDialog();
   }
 
-  /// Show a dialog to rate the session 1-5 stars before the celebration.
+  /// Ask for end-of-workout feedback: overall, fatigue and pump (each 1-5).
   void _showRatingDialog() {
-    int selectedRating = 0;
+    int overall = 0;
+    int fatigue = 0;
+    int pump = 0;
 
     showDialog(
       context: context,
@@ -75,48 +78,32 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: AppColors.bgSecondary,
           title: const GradientText(
-            'How was the workout?',
+            "Com'è andato l'allenamento?",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (i) {
-                  final starIndex = i + 1;
-                  return GestureDetector(
-                    onTap: () =>
-                        setDialogState(() => selectedRating = starIndex),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Icon(
-                        starIndex <= selectedRating
-                            ? Icons.star
-                            : Icons.star_border,
-                        color: starIndex <= selectedRating
-                            ? AppColors.warning
-                            : AppColors.textSecondary,
-                        size: 40,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                selectedRating > 0
-                    ? _ratingLabel(selectedRating)
-                    : 'Tap a star to rate',
-                style: TextStyle(
-                  color: selectedRating > 0
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontSize: 14,
+          contentPadding: const EdgeInsets.fromLTRB(
+              AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _RatingSection(
+                  label: 'Complessivamente',
+                  value: overall,
+                  onChanged: (v) => setDialogState(() => overall = v),
                 ),
-              ),
-            ],
+                _RatingSection(
+                  label: 'Sensazione di fatica',
+                  value: fatigue,
+                  onChanged: (v) => setDialogState(() => fatigue = v),
+                ),
+                _RatingSection(
+                  label: 'Sensazione di pump',
+                  value: pump,
+                  onChanged: (v) => setDialogState(() => pump = v),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -125,22 +112,22 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
                 _showCompletionScreen();
               },
               child: const Text(
-                'Skip',
+                'Salta',
                 style: TextStyle(color: AppColors.textSecondary),
               ),
             ),
             GlowButton(
-              label: 'Confirm',
+              label: 'Conferma',
               onPressed: () {
-                if (selectedRating > 0) {
-                  ref
-                      .read(activeSessionProvider.notifier)
-                      .setRating(selectedRating);
-                  Navigator.of(ctx).pop();
-                  _showCompletionScreen();
-                }
+                ref.read(activeSessionProvider.notifier).setRatings(
+                      overall: overall,
+                      fatigue: fatigue,
+                      pump: pump,
+                    );
+                Navigator.of(ctx).pop();
+                _showCompletionScreen();
               },
-              enabled: selectedRating > 0,
+              enabled: overall > 0 || fatigue > 0 || pump > 0,
               color: AppColors.success,
               height: 40,
             ),
@@ -148,23 +135,6 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
         ),
       ),
     );
-  }
-
-  String _ratingLabel(int rating) {
-    switch (rating) {
-      case 1:
-        return 'Terrible';
-      case 2:
-        return 'Poor';
-      case 3:
-        return 'Okay';
-      case 4:
-        return 'Good';
-      case 5:
-        return 'Amazing!';
-      default:
-        return '';
-    }
   }
 
   /// Show completion dialog with celebration overlay.
@@ -199,93 +169,95 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     final elapsed = DateTime.now().difference(session.startedAt);
     final elapsedMin = elapsed.inMinutes;
 
+    final hasWarmup = sessionState.warmup.isNotEmpty;
+    final warmupOffset = hasWarmup ? 1 : 0;
+
     return Scaffold(
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
-              children: [
-                // Header bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.sm,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header bar
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => _showCancelDialog(),
                   ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => _showCancelDialog(),
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Text(
-                              session.dayName ?? 'Workout',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            Text(
-                              '${elapsedMin}min - ${sessionState.completedExercises}/${sessionState.totalExercises} esercizi',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text(
+                          session.dayName ?? 'Workout',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                      ),
-                      TextButton(
-                        onPressed: _finishWorkout,
-                        child: const Text(
-                          'FINE',
-                          style: TextStyle(
-                            color: AppColors.success,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Text(
+                          '${elapsedMin}min - ${sessionState.completedExercises}/${sessionState.totalExercises} esercizi',
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                // Exercise list
-                Expanded(
-                  child: ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    itemCount: session.exercises.length + 1, // +1 for add button
-                    itemBuilder: (context, index) {
-                      if (index == session.exercises.length) {
-                        return _AddExerciseButton(
-                          onAdd: () => _showAddExerciseDialog(),
-                        );
-                      }
-                      return _ExerciseCard(
-                        exercise: session.exercises[index],
-                        exerciseIndex: index,
-                        onSetCompleted: (setIndex) => _onSetCompleted(
-                          session.exercises[index],
-                          index,
-                          setIndex,
-                        ),
-                      );
-                    },
+                  TextButton(
+                    onPressed: _finishWorkout,
+                    child: const Text(
+                      'FINE',
+                      style: TextStyle(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // Rest timer overlay
-          if (_showTimer)
-            RestTimerOverlay(
+            // Persistent rest timer bar — stays visible at the top while
+            // resting and auto-hides when the countdown ends or is skipped.
+            RestTimerBar(
               timer: _restTimer,
               exerciseName: _lastExerciseName,
               currentSet: _lastSetNumber,
               totalSets: _lastTotalSets,
               onSkip: () {
                 _restTimer.skip();
-                setState(() => _showTimer = false);
+                setState(() {});
               },
               onAddThirty: () => _restTimer.addThirtySeconds(),
-              onDismiss: () => setState(() => _showTimer = false),
             ),
-        ],
+            // Warm-up checklist (top) + exercises + add button
+            Expanded(
+              child: ListView.builder(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                itemCount: session.exercises.length + 1 + warmupOffset,
+                itemBuilder: (context, index) {
+                  if (hasWarmup && index == 0) {
+                    return const _WarmupChecklist();
+                  }
+                  final exIndex = index - warmupOffset;
+                  if (exIndex == session.exercises.length) {
+                    return _AddExerciseButton(
+                      onAdd: () => _showAddExerciseDialog(),
+                    );
+                  }
+                  return _ExerciseCard(
+                    exercise: session.exercises[exIndex],
+                    exerciseIndex: exIndex,
+                    onSetCompleted: (setIndex) => _onSetCompleted(
+                      session.exercises[exIndex],
+                      exIndex,
+                      setIndex,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -326,34 +298,50 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.bgSecondary,
         title: const Text('Aggiungi esercizio'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(hintText: 'Nome esercizio'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: setsController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(hintText: 'Serie'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(labelText: 'Nome esercizio'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: setsController,
+                      keyboardType: TextInputType.number,
+                      onTap: () => setsController.selection = TextSelection(
+                          baseOffset: 0,
+                          extentOffset: setsController.text.length),
+                      decoration: const InputDecoration(labelText: 'Serie'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: TextField(
-                    controller: repsController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(hintText: 'Reps'),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: TextField(
+                      controller: repsController,
+                      keyboardType: TextInputType.number,
+                      onTap: () => repsController.selection = TextSelection(
+                          baseOffset: 0,
+                          extentOffset: repsController.text.length),
+                      decoration: const InputDecoration(labelText: 'Reps'),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'Potrai aggiungere altre serie con "+ Serie" durante l\'esercizio.',
+                style: TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -362,9 +350,9 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
           ),
           TextButton(
             onPressed: () {
-              if (nameController.text.isNotEmpty) {
+              if (nameController.text.trim().isNotEmpty) {
                 ref.read(activeSessionProvider.notifier).addCustomExercise(
-                      name: nameController.text,
+                      name: nameController.text.trim(),
                       sets: int.tryParse(setsController.text) ?? 3,
                       reps: int.tryParse(repsController.text) ?? 10,
                     );
@@ -421,10 +409,20 @@ class _CompletionDialogState extends State<_CompletionDialog> {
                 _SummaryRow(
                     label: 'Volume totale',
                     value: '${session.totalVolume.toStringAsFixed(0)} kg'),
-                if (session.rating > 0)
+                if (session.overallRating > 0)
                   _SummaryRow(
-                    label: 'Valutazione',
-                    value: List.filled(session.rating, '\u2605').join(),
+                    label: 'Complessivamente',
+                    value: _stars(session.overallRating),
+                  ),
+                if (session.fatigueRating > 0)
+                  _SummaryRow(
+                    label: 'Fatica',
+                    value: _stars(session.fatigueRating),
+                  ),
+                if (session.pumpRating > 0)
+                  _SummaryRow(
+                    label: 'Pump',
+                    value: _stars(session.pumpRating),
                   ),
               ],
             ],
@@ -552,7 +550,7 @@ class _ExerciseCard extends ConsumerWidget {
                         .read(activeSessionProvider.notifier)
                         .addSet(exerciseIndex: exerciseIndex),
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Serie'),
+                    label: const Text('Aggiungi serie'),
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.primary,
                     ),
@@ -625,6 +623,173 @@ class _AddExerciseButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Render an integer score as filled/empty stars for summaries.
+String _stars(int n) => '★' * n + '☆' * (5 - n);
+
+/// Collapsible warm-up checklist shown at the top of the active workout.
+class _WarmupChecklist extends ConsumerStatefulWidget {
+  const _WarmupChecklist();
+
+  @override
+  ConsumerState<_WarmupChecklist> createState() => _WarmupChecklistState();
+}
+
+class _WarmupChecklistState extends ConsumerState<_WarmupChecklist> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(activeSessionProvider);
+    if (state == null || state.warmup.isEmpty) return const SizedBox.shrink();
+
+    final allDone = state.warmupAllDone;
+    final accent = allDone ? AppColors.success : AppColors.warning;
+
+    return GlassmorphismCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      borderColor: accent.withValues(alpha: 0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                Icon(allDone ? Icons.check_circle : Icons.whatshot,
+                    color: accent, size: 20),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Riscaldamento (${state.warmupDoneCount}/${state.warmup.length})',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Icon(_expanded ? Icons.expand_less : Icons.expand_more,
+                    color: AppColors.textSecondary),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: AppSpacing.xs),
+            ...state.warmup.asMap().entries.map((entry) {
+              final i = entry.key;
+              final checked =
+                  i < state.warmupChecked.length && state.warmupChecked[i];
+              return InkWell(
+                onTap: () =>
+                    ref.read(activeSessionProvider.notifier).toggleWarmup(i),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Icon(
+                        checked
+                            ? Icons.check_box
+                            : Icons.check_box_outline_blank,
+                        color: checked
+                            ? AppColors.success
+                            : AppColors.textSecondary,
+                        size: 22,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          entry.value,
+                          style: TextStyle(
+                            color: checked
+                                ? AppColors.textSecondary
+                                : AppColors.textPrimary,
+                            decoration: checked
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One labelled 1-5 rating row in the end-of-workout feedback dialog.
+class _RatingSection extends StatelessWidget {
+  const _RatingSection({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _StarRating(value: value, onChanged: onChanged),
+        ],
+      ),
+    );
+  }
+}
+
+/// Five tappable stars that never overflow (scaled down to fit if needed),
+/// so the 5th star is always reachable on narrow dialogs.
+class _StarRating extends StatelessWidget {
+  const _StarRating({required this.value, required this.onChanged});
+
+  final int value;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(5, (i) {
+          final starIndex = i + 1;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onChanged(starIndex),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Icon(
+                starIndex <= value ? Icons.star : Icons.star_border,
+                color: starIndex <= value
+                    ? AppColors.warning
+                    : AppColors.textSecondary,
+                size: 36,
+              ),
+            ),
+          );
+        }),
       ),
     );
   }

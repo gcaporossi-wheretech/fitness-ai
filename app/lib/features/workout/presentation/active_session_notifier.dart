@@ -12,12 +12,16 @@ class ActiveSessionState {
     required this.session,
     this.currentExerciseIndex = 0,
     this.isCompleted = false,
+    this.warmup = const [],
     this.warmupChecked = const [],
   });
 
   final WorkoutSession session;
   final int currentExerciseIndex;
   final bool isCompleted;
+
+  /// Warmup items for this day (their text labels).
+  final List<String> warmup;
 
   /// Warmup checklist state (one bool per warmup item).
   final List<bool> warmupChecked;
@@ -43,12 +47,14 @@ class ActiveSessionState {
     WorkoutSession? session,
     int? currentExerciseIndex,
     bool? isCompleted,
+    List<String>? warmup,
     List<bool>? warmupChecked,
   }) {
     return ActiveSessionState(
       session: session ?? this.session,
       currentExerciseIndex: currentExerciseIndex ?? this.currentExerciseIndex,
       isCompleted: isCompleted ?? this.isCompleted,
+      warmup: warmup ?? this.warmup,
       warmupChecked: warmupChecked ?? this.warmupChecked,
     );
   }
@@ -121,9 +127,14 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
       exercises: exercises,
     );
 
+    // Use the day's warm-up if defined, otherwise a sensible default so the
+    // warm-up checklist is always shown during a workout.
+    final warmup = day.warmup.isNotEmpty ? day.warmup : kDefaultWarmup;
+
     state = ActiveSessionState(
       session: session,
-      warmupChecked: List.filled(day.warmup.length, false),
+      warmup: warmup,
+      warmupChecked: List.filled(warmup.length, false),
     );
     _save();
   }
@@ -251,11 +262,13 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
     final exercise = exercises[exerciseIndex];
     final sets = List<SetLog>.from(exercise.sets);
 
-    final lastSet = sets.last;
+    // Copy weight/reps from the previous set when one exists; otherwise start
+    // a fresh set (handles exercises that ended up with zero sets).
+    final lastSet = sets.isNotEmpty ? sets.last : null;
     sets.add(SetLog(
       setNumber: sets.length + 1,
-      plannedReps: lastSet.plannedReps,
-      weight: lastSet.weight,
+      plannedReps: lastSet?.plannedReps ?? 10,
+      weight: lastSet?.weight ?? 0,
     ));
     exercises[exerciseIndex] = exercise.copyWith(sets: sets);
 
@@ -298,13 +311,17 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
     final s = state;
     if (s == null) return;
 
+    // Always create at least one set so the exercise is immediately usable
+    // and the "+ Serie" control has a set to copy from.
+    final setCount = sets < 1 ? 1 : sets;
+    final repsValue = reps < 1 ? 10 : reps;
     final exercises = List<ExerciseLog>.from(s.session.exercises);
     exercises.add(ExerciseLog(
       exerciseId: 'custom-${DateTime.now().millisecondsSinceEpoch}',
       exerciseName: name,
       exerciseType: exerciseType,
       sets: List.generate(
-          sets, (i) => SetLog(setNumber: i + 1, plannedReps: reps)),
+          setCount, (i) => SetLog(setNumber: i + 1, plannedReps: repsValue)),
     ));
 
     state = s.copyWith(
@@ -348,12 +365,21 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
     state = s.copyWith(warmupChecked: updated);
   }
 
-  /// Set the session rating (1-5 stars).
-  void setRating(int rating) {
+  /// Set the three end-of-workout feedback metrics (each 1-5, 0 = not rated):
+  /// overall quality, perceived fatigue, and pump sensation.
+  void setRatings({
+    required int overall,
+    required int fatigue,
+    required int pump,
+  }) {
     final s = state;
     if (s == null) return;
     state = s.copyWith(
-      session: s.session.copyWith(rating: rating.clamp(0, 5)),
+      session: s.session.copyWith(
+        overallRating: overall.clamp(0, 5),
+        fatigueRating: fatigue.clamp(0, 5),
+        pumpRating: pump.clamp(0, 5),
+      ),
     );
     _save();
   }

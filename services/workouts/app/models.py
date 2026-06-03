@@ -64,6 +64,10 @@ class WorkoutSession(Base):
     duration_seconds: Mapped[int | None] = mapped_column(Integer)
     exercises: Mapped[dict] = mapped_column(JSONB, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
+    # End-of-workout feedback (each 1-5, nullable when not rated).
+    overall_rating: Mapped[int | None] = mapped_column(Integer)
+    fatigue_rating: Mapped[int | None] = mapped_column(Integer)
+    pump_rating: Mapped[int | None] = mapped_column(Integer)
     synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     client_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, unique=True)
     created_at: Mapped[datetime] = mapped_column(
