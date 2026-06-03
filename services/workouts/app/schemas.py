@@ -28,6 +28,7 @@ class WorkoutDay(BaseModel):
 
     name: str = Field(max_length=100)
     exercises: list[ExerciseInDay]
+    warmup: list[str] | None = Field(None, max_length=20)
 
 
 class CreatePlanRequest(BaseModel):
@@ -101,6 +102,9 @@ class CreateSessionRequest(BaseModel):
     duration_seconds: int | None = Field(None, ge=0)
     exercises: list[ExerciseLog] = Field(min_length=1)
     notes: str | None = None
+    overall_rating: int | None = Field(None, ge=1, le=5)
+    fatigue_rating: int | None = Field(None, ge=1, le=5)
+    pump_rating: int | None = Field(None, ge=1, le=5)
     client_id: uuid.UUID
 
 
@@ -116,6 +120,9 @@ class SessionResponse(BaseModel):
     duration_seconds: int | None
     exercises: list[dict]
     notes: str | None
+    overall_rating: int | None
+    fatigue_rating: int | None
+    pump_rating: int | None
     synced_at: datetime | None
     client_id: uuid.UUID
     created_at: datetime
@@ -138,6 +145,9 @@ class SyncSessionItem(BaseModel):
     duration_seconds: int | None = Field(None, ge=0)
     exercises: list[ExerciseLog] = Field(min_length=1)
     notes: str | None = None
+    overall_rating: int | None = Field(None, ge=1, le=5)
+    fatigue_rating: int | None = Field(None, ge=1, le=5)
+    pump_rating: int | None = Field(None, ge=1, le=5)
     client_id: uuid.UUID
 
 

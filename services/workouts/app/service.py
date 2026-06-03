@@ -190,6 +190,9 @@ class WorkoutService:
         completed_at: datetime | None = None,
         duration_seconds: int | None = None,
         notes: str | None = None,
+        overall_rating: int | None = None,
+        fatigue_rating: int | None = None,
+        pump_rating: int | None = None,
     ) -> WorkoutSession:
         """Create a new workout session.
 
@@ -203,6 +206,9 @@ class WorkoutService:
             completed_at: Optional completion timestamp.
             duration_seconds: Optional total duration.
             notes: Optional session notes.
+            overall_rating: Optional overall workout rating (1-5).
+            fatigue_rating: Optional perceived-fatigue rating (1-5).
+            pump_rating: Optional pump-sensation rating (1-5).
 
         Returns:
             Created WorkoutSession object.
@@ -225,6 +231,9 @@ class WorkoutService:
             duration_seconds=duration_seconds,
             exercises=exercises,
             notes=notes,
+            overall_rating=overall_rating,
+            fatigue_rating=fatigue_rating,
+            pump_rating=pump_rating,
             client_id=client_id,
             synced_at=datetime.now(UTC),
         )
@@ -322,6 +331,9 @@ class WorkoutService:
                     duration_seconds=session_data.get("duration_seconds"),
                     exercises=session_data["exercises"],
                     notes=session_data.get("notes"),
+                    overall_rating=session_data.get("overall_rating"),
+                    fatigue_rating=session_data.get("fatigue_rating"),
+                    pump_rating=session_data.get("pump_rating"),
                     client_id=client_id,
                     synced_at=datetime.now(UTC),
                 )

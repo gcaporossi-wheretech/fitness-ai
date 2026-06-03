@@ -4,71 +4,88 @@ import 'package:fitness_ai/features/workout/domain/set_log.dart';
 import 'package:fitness_ai/features/workout/domain/workout_session.dart';
 
 void main() {
-  group('WorkoutSession rating', () {
-    test('default rating is 0', () {
+  group('WorkoutSession ratings', () {
+    test('default ratings are 0', () {
       final session = WorkoutSession(
         id: '1',
         startedAt: DateTime.now(),
         exercises: [],
       );
-      expect(session.rating, 0);
+      expect(session.overallRating, 0);
+      expect(session.fatigueRating, 0);
+      expect(session.pumpRating, 0);
     });
 
-    test('copyWith updates rating', () {
+    test('copyWith updates the three ratings', () {
       final session = WorkoutSession(
         id: '1',
         startedAt: DateTime.now(),
         exercises: [],
       );
-      final rated = session.copyWith(rating: 4);
-      expect(rated.rating, 4);
+      final rated =
+          session.copyWith(overallRating: 4, fatigueRating: 3, pumpRating: 5);
+      expect(rated.overallRating, 4);
+      expect(rated.fatigueRating, 3);
+      expect(rated.pumpRating, 5);
       expect(rated.id, '1'); // other fields preserved
     });
 
-    test('fromJson reads rating', () {
+    test('fromJson reads the three ratings', () {
       final json = {
         'id': '1',
         'started_at': '2026-04-07T10:00:00.000',
         'exercises': <dynamic>[],
-        'rating': 5,
+        'overall_rating': 5,
+        'fatigue_rating': 2,
+        'pump_rating': 4,
       };
       final session = WorkoutSession.fromJson(json);
-      expect(session.rating, 5);
+      expect(session.overallRating, 5);
+      expect(session.fatigueRating, 2);
+      expect(session.pumpRating, 4);
     });
 
-    test('fromJson reads session_rating as fallback', () {
+    test('fromJson reads legacy rating as overall fallback', () {
       final json = {
         'id': '1',
         'started_at': '2026-04-07T10:00:00.000',
         'exercises': <dynamic>[],
-        'session_rating': 3,
+        'rating': 3,
       };
       final session = WorkoutSession.fromJson(json);
-      expect(session.rating, 3);
+      expect(session.overallRating, 3);
+      expect(session.fatigueRating, 0);
+      expect(session.pumpRating, 0);
     });
 
-    test('fromJson defaults to 0 when rating missing', () {
+    test('fromJson defaults to 0 when ratings missing', () {
       final json = {
         'id': '1',
         'started_at': '2026-04-07T10:00:00.000',
         'exercises': <dynamic>[],
       };
       final session = WorkoutSession.fromJson(json);
-      expect(session.rating, 0);
+      expect(session.overallRating, 0);
+      expect(session.fatigueRating, 0);
+      expect(session.pumpRating, 0);
     });
 
-    test('toJson includes rating', () {
+    test('toJson includes the three ratings', () {
       final session = WorkoutSession(
         id: '1',
         startedAt: DateTime(2026, 4, 7, 10),
         exercises: [],
-        rating: 4,
+        overallRating: 4,
+        fatigueRating: 3,
+        pumpRating: 2,
       );
       final json = session.toJson();
-      expect(json['rating'], 4);
+      expect(json['overall_rating'], 4);
+      expect(json['fatigue_rating'], 3);
+      expect(json['pump_rating'], 2);
     });
 
-    test('roundtrip preserves rating', () {
+    test('roundtrip preserves ratings', () {
       final session = WorkoutSession(
         id: '1',
         startedAt: DateTime(2026, 4, 7, 10),
@@ -86,11 +103,15 @@ void main() {
             ],
           ),
         ],
-        rating: 5,
+        overallRating: 5,
+        fatigueRating: 4,
+        pumpRating: 3,
       );
       final json = session.toJson();
       final restored = WorkoutSession.fromJson(json);
-      expect(restored.rating, 5);
+      expect(restored.overallRating, 5);
+      expect(restored.fatigueRating, 4);
+      expect(restored.pumpRating, 3);
       expect(restored.totalVolume, session.totalVolume);
     });
   });

@@ -48,6 +48,27 @@ async def test_create_plan_success(client: AsyncClient, auth_headers: dict):
 
 
 @pytest.mark.asyncio
+async def test_create_plan_with_warmup(client: AsyncClient, auth_headers: dict):
+    """A day's warm-up items should be persisted and returned."""
+    payload = {
+        "name": "Warmup Plan",
+        "days": [
+            {
+                "name": "Day 1",
+                "warmup": ["5 min cardio", "Mobilità spalle"],
+                "exercises": [
+                    {"exercise_name": "Bench Press", "sets": 3, "reps": "10"},
+                ],
+            },
+        ],
+    }
+    response = await client.post("/workouts/plans", json=payload, headers=auth_headers)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["days"][0]["warmup"] == ["5 min cardio", "Mobilità spalle"]
+
+
+@pytest.mark.asyncio
 async def test_create_plan_no_auth(client: AsyncClient):
     """Creating a plan without authentication should return 403."""
     response = await client.post("/workouts/plans", json=SAMPLE_PLAN)

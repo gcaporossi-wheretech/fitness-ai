@@ -51,6 +51,43 @@ async def test_create_session_success(client: AsyncClient, auth_headers: dict):
 
 
 @pytest.mark.asyncio
+async def test_create_session_with_ratings(client: AsyncClient, auth_headers: dict):
+    """Overall/fatigue/pump ratings should be stored and returned."""
+    payload = make_session_data()
+    payload["overall_rating"] = 5
+    payload["fatigue_rating"] = 3
+    payload["pump_rating"] = 4
+    response = await client.post("/workouts/sessions", json=payload, headers=auth_headers)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["overall_rating"] == 5
+    assert data["fatigue_rating"] == 3
+    assert data["pump_rating"] == 4
+
+
+@pytest.mark.asyncio
+async def test_create_session_rating_out_of_range(client: AsyncClient, auth_headers: dict):
+    """A rating outside 1-5 should be rejected with 422."""
+    payload = make_session_data()
+    payload["overall_rating"] = 9
+    response = await client.post("/workouts/sessions", json=payload, headers=auth_headers)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_create_session_no_ratings_defaults_null(client: AsyncClient, auth_headers: dict):
+    """Sessions created without ratings should return null for each rating."""
+    response = await client.post(
+        "/workouts/sessions", json=make_session_data(), headers=auth_headers
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["overall_rating"] is None
+    assert data["fatigue_rating"] is None
+    assert data["pump_rating"] is None
+
+
+@pytest.mark.asyncio
 async def test_create_session_no_auth(client: AsyncClient):
     """Creating a session without auth should return 403."""
     response = await client.post("/workouts/sessions", json=make_session_data())
