@@ -26,6 +26,7 @@ from app.schemas import (
 from app.service import (
     DuplicateClientIdError,
     PlanNotFoundError,
+    SessionNotFoundError,
     WorkoutService,
 )
 
@@ -242,6 +243,26 @@ async def create_session(
     except DuplicateClientIdError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from exc
     return SessionResponse.model_validate(session)
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_session(
+    session_id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete a workout session owned by the authenticated user.
+
+    Args:
+        session_id: Session UUID.
+        user_id: Authenticated user UUID from JWT.
+        db: Database session.
+    """
+    service = WorkoutService(db)
+    try:
+        await service.delete_session(session_id, user_id)
+    except SessionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
 
 
 # ============================================================

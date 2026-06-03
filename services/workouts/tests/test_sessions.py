@@ -210,3 +210,40 @@ async def test_sync_sessions_duplicate(client: AsyncClient, auth_headers: dict):
     response = await client.post("/workouts/sync", json=payload, headers=auth_headers)
     assert response.status_code == 200
     assert response.json()["results"][0]["status"] == "duplicate"
+
+
+@pytest.mark.asyncio
+async def test_delete_session_success(client: AsyncClient, auth_headers: dict):
+    """Deleting an owned session returns 204 and removes it from the list."""
+    created = await client.post(
+        "/workouts/sessions", json=make_session_data(), headers=auth_headers
+    )
+    session_id = created.json()["id"]
+
+    resp = await client.delete(f"/workouts/sessions/{session_id}", headers=auth_headers)
+    assert resp.status_code == 204
+
+    listed = await client.get("/workouts/sessions", headers=auth_headers)
+    assert listed.json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_delete_session_not_found(client: AsyncClient, auth_headers: dict):
+    """Deleting a non-existent session returns 404."""
+    resp = await client.delete(f"/workouts/sessions/{uuid.uuid4()}", headers=auth_headers)
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_session_other_user(client: AsyncClient, auth_headers: dict):
+    """A user cannot delete another user's session."""
+    from tests.conftest import create_test_token
+
+    created = await client.post(
+        "/workouts/sessions", json=make_session_data(), headers=auth_headers
+    )
+    session_id = created.json()["id"]
+
+    other = {"Authorization": f"Bearer {create_test_token(str(uuid.uuid4()))}"}
+    resp = await client.delete(f"/workouts/sessions/{session_id}", headers=other)
+    assert resp.status_code == 404

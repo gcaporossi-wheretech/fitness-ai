@@ -576,6 +576,20 @@ class _ExerciseCard extends ConsumerWidget {
                       foregroundColor: AppColors.primary,
                     ),
                   ),
+                  if (exercise.sets.length > 1)
+                    TextButton.icon(
+                      onPressed: () => ref
+                          .read(activeSessionProvider.notifier)
+                          .removeSet(
+                            exerciseIndex: exerciseIndex,
+                            setIndex: exercise.sets.length - 1,
+                          ),
+                      icon: const Icon(Icons.remove, size: 16),
+                      label: const Text('Rimuovi'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                      ),
+                    ),
                 ],
               ),
             ],
