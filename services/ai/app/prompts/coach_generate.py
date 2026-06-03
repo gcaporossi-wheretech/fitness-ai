@@ -36,7 +36,7 @@ Response JSON schema:
 {
   "plan_name": "string - nome scheda (italiano)",
   "description": "string - panoramica della scheda e dell'obiettivo (italiano)",
-  "assessment": "string - ITALIANO: situazione attuale dalle foto + come la scheda lavora sull'obiettivo (2-4 frasi)",
+  "assessment": "string - ITALIANO: situazione dalle foto + obiettivo (2-4 frasi)",
   "photo_review_weeks": "integer - tra quante settimane rifare le foto",
   "duration_weeks": "integer",
   "days_per_week": "integer",
@@ -47,7 +47,7 @@ Response JSON schema:
       "focus": "string - gruppi muscolari principali",
       "exercises": [
         {
-          "exercise_name": "string - nome esercizio in ITALIANO (riusa un nome esistente verbatim se combacia)",
+          "exercise_name": "string - nome IT (riusa un nome esistente se combacia)",
           "muscle_groups": ["string"],
           "sets": "integer",
           "reps": "string - es. '8-12'",
