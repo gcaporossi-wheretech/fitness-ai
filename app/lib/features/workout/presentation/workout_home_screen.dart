@@ -11,6 +11,7 @@ import 'package:fitness_ai/features/workout/presentation/active_workout_screen.d
 import 'package:fitness_ai/features/workout/presentation/create_plan_screen.dart';
 import 'package:fitness_ai/features/ai/presentation/coach_onboarding_screen.dart';
 import 'package:fitness_ai/features/ai/presentation/vision_scan_screen.dart';
+import 'package:fitness_ai/features/nutrition/presentation/nutrition_screen.dart';
 
 /// Main workout screen: shows the active plan's days and starts a session.
 /// This is the default tab and the entry point of the app.
@@ -36,6 +37,8 @@ class WorkoutHomeScreen extends ConsumerWidget {
               Text('Oggi', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: AppSpacing.md),
               const _AiActions(),
+              const SizedBox(height: AppSpacing.sm),
+              const _NutritionCard(),
               const SizedBox(height: AppSpacing.lg),
               Expanded(
                 child: planAsync.when(
@@ -57,7 +60,7 @@ class WorkoutHomeScreen extends ConsumerWidget {
   void _reload(WidgetRef ref) => ref.invalidate(activePlanProvider);
 
   Future<void> _create(BuildContext context, WidgetRef ref) async {
-    await Navigator.of(context).push(
+    await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const CreatePlanScreen()),
     );
     ref.invalidate(activePlanProvider);
@@ -72,7 +75,7 @@ class _PlanView extends ConsumerWidget {
 
   void _start(BuildContext context, WidgetRef ref, WorkoutDay day) {
     ref.read(activeSessionProvider.notifier).startSession(day, planId: plan.id);
-    Navigator.of(context).push(
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(builder: (_) => const ActiveWorkoutScreen()),
     );
   }
@@ -194,7 +197,7 @@ class _AiActions extends StatelessWidget {
             icon: Icons.auto_awesome,
             label: 'Coach AI',
             subtitle: 'Genera scheda',
-            onTap: () => Navigator.of(context).push(
+            onTap: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute(builder: (_) => const CoachOnboardingScreen()),
             ),
           ),
@@ -205,12 +208,55 @@ class _AiActions extends StatelessWidget {
             icon: Icons.camera_alt,
             label: 'Scansiona',
             subtitle: 'Riconosci attrezzo',
-            onTap: () => Navigator.of(context).push(
+            onTap: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute(builder: (_) => const VisionScanScreen()),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Full-width entry to the Nutrition screen.
+class _NutritionCard extends StatelessWidget {
+  const _NutritionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassmorphismCard(
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(builder: (_) => const NutritionScreen()),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      borderColor: AppColors.success.withValues(alpha: 0.25),
+      child: Row(
+        children: [
+          const Icon(Icons.restaurant_menu, color: AppColors.success, size: 26),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nutrizione',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  'Calorie e macro su misura + menù',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+        ],
+      ),
     );
   }
 }
