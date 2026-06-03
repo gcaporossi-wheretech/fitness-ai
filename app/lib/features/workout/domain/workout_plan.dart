@@ -35,12 +35,12 @@ class WorkoutPlan {
       name: json['name'] as String,
       description: json['description'] as String?,
       days: ((json['days'] ?? []) as List)
-          .map((d) => WorkoutDay.fromJson(d as Map<String, dynamic>))
+          .map((d) => WorkoutDay.fromJson(Map<String, dynamic>.from(d as Map)))
           .toList(),
       isActive: (json['is_active'] ?? true) as bool,
       source: (json['source'] ?? 'manual') as String,
       phases: (json['phases'] as List?)
-          ?.map((p) => p as Map<String, dynamic>)
+          ?.map((p) => Map<String, dynamic>.from(p as Map))
           .toList(),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'].toString())
@@ -90,7 +90,7 @@ class WorkoutDay {
     return WorkoutDay(
       name: json['name'] as String,
       exercises: ((json['exercises'] ?? []) as List)
-          .map((e) => PlannedExercise.fromJson(e as Map<String, dynamic>))
+          .map((e) => PlannedExercise.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
       warmup: ((json['warmup'] ?? []) as List).cast<String>(),
     );

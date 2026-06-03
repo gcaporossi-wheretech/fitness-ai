@@ -36,11 +36,19 @@ class WorkoutRepository {
   }
 
   /// Get all local sessions, most recent first.
+  /// Per-record defensive parsing so a malformed cached entry can't break
+  /// session start / history.
   List<WorkoutSession> getAllLocalSessions() {
-    return HiveStorage.sessions.values
-        .map((m) => WorkoutSession.fromJson(Map<String, dynamic>.from(m)))
-        .toList()
-      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    final out = <WorkoutSession>[];
+    for (final m in HiveStorage.sessions.values) {
+      try {
+        out.add(WorkoutSession.fromJson(Map<String, dynamic>.from(m as Map)));
+      } catch (_) {
+        // skip corrupt/incompatible cached record
+      }
+    }
+    out.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    return out;
   }
 
   /// Get unsynced sessions that need to be sent to the API.
@@ -171,9 +179,15 @@ class WorkoutRepository {
 
   /// Get cached plans from Hive (for offline use).
   List<WorkoutPlan> getCachedPlans() {
-    return HiveStorage.plans.values
-        .map((m) => WorkoutPlan.fromJson(Map<String, dynamic>.from(m)))
-        .toList();
+    final out = <WorkoutPlan>[];
+    for (final m in HiveStorage.plans.values) {
+      try {
+        out.add(WorkoutPlan.fromJson(Map<String, dynamic>.from(m as Map)));
+      } catch (_) {
+        // skip corrupt/incompatible cached record
+      }
+    }
+    return out;
   }
 
   // ============================================================

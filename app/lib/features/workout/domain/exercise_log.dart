@@ -64,7 +64,7 @@ class ExerciseLog {
       restSeconds:
           (json['rest_seconds'] ?? json['restSeconds'] ?? 90) as int,
       sets: ((json['sets'] ?? []) as List)
-          .map((s) => SetLog.fromJson(s as Map<String, dynamic>))
+          .map((s) => SetLog.fromJson(Map<String, dynamic>.from(s as Map)))
           .toList(),
       skipped: (json['skipped'] ?? false) as bool,
       notes: (json['notes'] ?? '') as String,

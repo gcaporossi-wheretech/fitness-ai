@@ -15,12 +15,20 @@ class HistoryRepository {
   final ApiClient apiClient;
 
   /// Get all local sessions sorted by date (newest first).
+  /// Parsing is per-record defensive: a single malformed cached entry can
+  /// never blank the whole screen.
   List<WorkoutSession> getLocalSessions() {
-    return HiveStorage.sessions.values
-        .map((m) => WorkoutSession.fromJson(Map<String, dynamic>.from(m)))
-        .where((s) => s.isCompleted)
-        .toList()
-      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    final out = <WorkoutSession>[];
+    for (final m in HiveStorage.sessions.values) {
+      try {
+        final s = WorkoutSession.fromJson(Map<String, dynamic>.from(m as Map));
+        if (s.isCompleted) out.add(s);
+      } catch (_) {
+        // skip corrupt/incompatible cached record
+      }
+    }
+    out.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    return out;
   }
 
   /// Fetch sessions from API and cache locally.

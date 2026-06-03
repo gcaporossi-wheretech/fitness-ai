@@ -111,7 +111,7 @@ class WorkoutSession {
           : null,
       durationSeconds: json['duration_seconds'] as int?,
       exercises: ((json['exercises'] ?? []) as List)
-          .map((e) => ExerciseLog.fromJson(e as Map<String, dynamic>))
+          .map((e) => ExerciseLog.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
       notes: (json['notes'] ?? '') as String,
       synced: (json['synced'] ?? false) as bool,
