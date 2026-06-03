@@ -230,9 +230,7 @@ async def test_delete_session_success(client: AsyncClient, auth_headers: dict):
 @pytest.mark.asyncio
 async def test_delete_session_not_found(client: AsyncClient, auth_headers: dict):
     """Deleting a non-existent session returns 404."""
-    resp = await client.delete(
-        f"/workouts/sessions/{uuid.uuid4()}", headers=auth_headers
-    )
+    resp = await client.delete(f"/workouts/sessions/{uuid.uuid4()}", headers=auth_headers)
     assert resp.status_code == 404
 
 
