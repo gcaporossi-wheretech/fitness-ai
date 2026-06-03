@@ -129,45 +129,41 @@ class _CoachOnboardingScreenState
     });
 
     try {
-      // Update user profile with personal data
-      final age = int.tryParse(_ageController.text);
-      if (age != null) {
-        // Profile update would go here if we had the auth repo available
-      }
-
       setState(() => _generationStatus = 'Generazione scheda personalizzata...');
 
+      final photos = <({Uint8List bytes, String filename})>[];
+      if (_frontPhoto != null) {
+        photos.add((bytes: _frontPhoto!, filename: 'front.jpg'));
+      }
+      if (_backPhoto != null) {
+        photos.add((bytes: _backPhoto!, filename: 'back.jpg'));
+      }
+      if (_sidePhoto != null) {
+        photos.add((bytes: _sidePhoto!, filename: 'side.jpg'));
+      }
+
+      final userData = <String, dynamic>{
+        if (int.tryParse(_ageController.text) != null)
+          'age': int.parse(_ageController.text),
+        'goals': _goal,
+        'available_days': _frequency,
+        if (_limitationsController.text.trim().isNotEmpty)
+          'limitations': _limitationsController.text.trim(),
+      };
+
       final aiRepo = ref.read(aiRepositoryProvider);
-      final job = await aiRepo.submitCoachGeneration();
+      final result = await aiRepo.generateCoachPlan(
+        photos: photos,
+        userData: userData,
+      );
 
-      setState(() => _generationStatus = 'Analisi in corso...');
-
-      final completedJob = await aiRepo.pollUntilComplete(job.jobId);
-
-      if (completedJob.isCompleted && completedJob.result != null) {
-        final result = aiRepo.parseCoachResult(completedJob);
-        setState(() => _isGenerating = false);
-
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => CoachResultScreen(result: result),
-            ),
-          );
-        }
-      } else {
-        setState(() {
-          _isGenerating = false;
-          _generationStatus = completedJob.error ?? 'Generazione fallita';
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(completedJob.error ?? 'Errore durante la generazione'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
+      setState(() => _isGenerating = false);
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => CoachResultScreen(result: result),
+          ),
+        );
       }
     } catch (e) {
       setState(() {

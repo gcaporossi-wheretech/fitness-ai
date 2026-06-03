@@ -81,27 +81,16 @@ class _VisionScanScreenState extends ConsumerState<VisionScanScreen> {
     });
 
     try {
+      setState(() => _statusMessage = 'Analisi in corso...');
       final aiRepo = ref.read(aiRepositoryProvider);
-      final job = await aiRepo.submitVisionScan(
+      final result = await aiRepo.scanEquipment(
         imageBytes: bytes,
         filename: filename,
       );
-
-      setState(() => _statusMessage = 'Analisi in corso...');
-
-      final completedJob = await aiRepo.pollUntilComplete(job.jobId);
-
-      if (completedJob.isCompleted && completedJob.result != null) {
-        setState(() {
-          _result = VisionResult.fromJson(completedJob.result!);
-          _isScanning = false;
-        });
-      } else {
-        setState(() {
-          _error = completedJob.error ?? 'Macchinario non riconosciuto';
-          _isScanning = false;
-        });
-      }
+      setState(() {
+        _result = result;
+        _isScanning = false;
+      });
     } catch (e) {
       setState(() {
         _error = e.toString();

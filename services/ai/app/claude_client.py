@@ -25,8 +25,8 @@ from app.prompts.vision_scan import (
 
 logger = logging.getLogger(__name__)
 
-# Claude model for vision tasks
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
+# Claude model for vision + coach tasks (configurable via CLAUDE_MODEL env).
+CLAUDE_MODEL = settings.claude_model
 MAX_TOKENS = 4096
 
 # Supported image MIME types for Claude Vision API

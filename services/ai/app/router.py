@@ -172,7 +172,7 @@ async def vision_history(
 
 @router.post("/coach/generate", response_model=CoachGenerateSyncResponse)
 async def coach_generate(
-    photos: list[UploadFile] = File(...),
+    photos: list[UploadFile] | None = File(None),
     data: str = Form("{}"),
     user_id: uuid.UUID = Depends(get_current_user_id),
     token: str = Depends(_get_token),
@@ -196,12 +196,8 @@ async def coach_generate(
     Returns:
         Generated workout plan with exercises.
     """
-    # Validate photo count
-    if len(photos) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="At least one photo is required",
-        )
+    # Photos are optional: a plan can be generated from the questionnaire alone.
+    photos = photos or []
     if len(photos) > MAX_COACH_PHOTOS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

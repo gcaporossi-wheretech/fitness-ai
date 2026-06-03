@@ -111,6 +111,23 @@ async def test_coach_generate_success(fake_redis, auth_headers, mock_coach_resul
 
 
 @pytest.mark.asyncio
+async def test_coach_generate_without_photos(fake_redis, auth_headers, mock_coach_result):
+    """Coach generation should work from the questionnaire alone (no photos)."""
+    patches = _build_patches(fake_redis, coach_result=mock_coach_result)
+
+    with patches[0], patches[1], patches[2], patches[3]:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/ai/coach/generate",
+                data={"data": json.dumps({"age": 30, "goals": "muscle", "available_days": 4})},
+                headers=auth_headers,
+            )
+            assert response.status_code == 200
+            assert response.json()["plan_name"] == "Beginner Full Body"
+
+
+@pytest.mark.asyncio
 async def test_coach_generate_multiple_photos(fake_redis, auth_headers, mock_coach_result):
     """Multiple photos should be accepted."""
     patches = _build_patches(fake_redis, coach_result=mock_coach_result)
