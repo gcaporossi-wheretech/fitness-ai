@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # e.g. claude-opus-4-8 (max quality), claude-sonnet-4-6 (balanced),
     # claude-haiku-4-5-20251001 (cheapest).
     claude_model: str = "claude-sonnet-4-6"
+    # Max output tokens. A full multi-day coach plan in JSON can be large, so
+    # keep this generous to avoid truncated (unparseable) responses.
+    claude_max_tokens: int = 8192
 
     # Redis (cache + job queue)
     redis_url: str = "redis://redis:6379/0"

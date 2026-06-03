@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Claude model for vision + coach tasks (configurable via CLAUDE_MODEL env).
 CLAUDE_MODEL = settings.claude_model
-MAX_TOKENS = 4096
+MAX_TOKENS = settings.claude_max_tokens
 
 # Supported image MIME types for Claude Vision API
 VALID_IMAGE_TYPES = ("image/jpeg", "image/png", "image/gif", "image/webp")
