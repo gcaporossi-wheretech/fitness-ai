@@ -481,15 +481,32 @@ class _ExerciseCard extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    exercise.exerciseName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: exercise.skipped
-                              ? AppColors.textDisabled
-                              : null,
-                          decoration:
-                              exercise.skipped ? TextDecoration.lineThrough : null,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        exercise.exerciseName,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: exercise.skipped
+                                  ? AppColors.textDisabled
+                                  : null,
+                              decoration: exercise.skipped
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                      ),
+                      if (exercise.notes.trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            exercise.notes,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: AppColors.textSecondary),
+                          ),
                         ),
+                    ],
                   ),
                 ),
                 // Skip / Unskip
