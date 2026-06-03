@@ -35,6 +35,41 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     });
   }
 
+  Future<bool> _confirmDelete(WorkoutSession session) async {
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgSecondary,
+        title: const Text('Eliminare la sessione?'),
+        content: Text(
+            '${session.dayName ?? 'Workout'} verrà rimossa dallo storico.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annulla'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Elimina',
+                style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    return res ?? false;
+  }
+
+  Future<void> _deleteSession(WorkoutSession session) async {
+    // Remove from the in-memory list first so the Dismissible is consistent.
+    setState(() =>
+        _sessions = _sessions.where((s) => s.id != session.id).toList());
+    final messenger = ScaffoldMessenger.of(context);
+    await ref.read(historyRepositoryProvider).deleteSession(session.id);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Sessione eliminata')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('d MMM yyyy', 'it');
@@ -90,7 +125,26 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           itemCount: _sessions.length,
                           itemBuilder: (context, index) {
                             final session = _sessions[index];
-                            return StaggeredListItem(
+                            return Dismissible(
+                              key: ValueKey(session.id),
+                              direction: DismissDirection.endToStart,
+                              confirmDismiss: (_) => _confirmDelete(session),
+                              onDismissed: (_) => _deleteSession(session),
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(
+                                    right: AppSpacing.lg),
+                                margin: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.xs),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(
+                                      AppSpacing.radiusMd),
+                                ),
+                                child: const Icon(Icons.delete_outline,
+                                    color: AppColors.error),
+                              ),
+                              child: StaggeredListItem(
                               index: index,
                               child: GlassmorphismCard(
                                 onTap: () {
@@ -172,6 +226,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                   ],
                                 ),
                               ),
+                            ),
                             );
                           },
                         ),

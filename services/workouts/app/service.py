@@ -287,6 +287,28 @@ class WorkoutService:
         sessions = list(result.scalars().all())
         return sessions, total
 
+    async def delete_session(self, session_id: uuid.UUID, user_id: uuid.UUID) -> None:
+        """Delete a workout session owned by the user.
+
+        Args:
+            session_id: Session UUID.
+            user_id: Owner user UUID.
+
+        Raises:
+            SessionNotFoundError: If the session does not exist or is not owned.
+        """
+        result = await self.db.execute(
+            select(WorkoutSession).where(
+                WorkoutSession.id == session_id,
+                WorkoutSession.user_id == user_id,
+            )
+        )
+        session = result.scalar_one_or_none()
+        if not session:
+            raise SessionNotFoundError()
+        await self.db.delete(session)
+        await self.db.commit()
+
     # ============================================================
     # Sync
     # ============================================================

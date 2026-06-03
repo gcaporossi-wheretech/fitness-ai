@@ -31,6 +31,18 @@ class HistoryRepository {
     return out;
   }
 
+  /// Delete a session from the local cache and (best-effort) from the server.
+  /// Sessions that exist only locally (never synced) just get removed locally;
+  /// a 404/connection error from the server is ignored.
+  Future<void> deleteSession(String id) async {
+    await HiveStorage.sessions.delete(id);
+    try {
+      await apiClient.delete('${ApiConstants.workoutSessions}/$id');
+    } on DioException {
+      // Local-only session or already gone server-side: nothing else to do.
+    }
+  }
+
   /// Fetch sessions from API and cache locally.
   Future<List<WorkoutSession>> fetchSessions({
     DateTime? from,
