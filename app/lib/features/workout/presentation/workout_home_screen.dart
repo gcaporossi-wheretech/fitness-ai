@@ -35,11 +35,9 @@ class WorkoutHomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text('Oggi', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: AppSpacing.md),
-              const _AiActions(),
               const SizedBox(height: AppSpacing.sm),
-              const _NutritionCard(),
-              const SizedBox(height: AppSpacing.lg),
+              const _QuickActions(),
+              const SizedBox(height: AppSpacing.md),
               Expanded(
                 child: planAsync.when(
                   loading: () =>
@@ -85,18 +83,28 @@ class _PlanView extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(plan.name, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppSpacing.xs),
+        Row(
+          children: [
+            Expanded(
+              child: Text(plan.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge),
+            ),
+            if (plan.description != null && plan.description!.trim().isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.info_outline, color: AppColors.primary),
+                tooltip: 'Info scheda',
+                onPressed: () =>
+                    _showPlanInfo(context, plan.description!.trim()),
+              ),
+          ],
+        ),
         Text(
           "Scegli l'allenamento di oggi",
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        const SizedBox(height: AppSpacing.md),
-        if (plan.description != null && plan.description!.trim().isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: _PlanInfoCard(text: plan.description!.trim()),
-          ),
+        const SizedBox(height: AppSpacing.sm),
         Expanded(
           child: ListView.separated(
             itemCount: plan.days.length,
@@ -110,7 +118,8 @@ class _PlanView extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Row(
                     children: [
-                      Icon(Icons.fitness_center, color: AppColors.primary),
+                      const Icon(Icons.fitness_center,
+                          color: AppColors.primary),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
@@ -130,7 +139,7 @@ class _PlanView extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      Icon(Icons.play_circle_fill,
+                      const Icon(Icons.play_circle_fill,
                           size: 36, color: AppColors.primary),
                     ],
                   ),
@@ -189,19 +198,18 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// Two entry points to the AI features (Coach generation + equipment scan).
-class _AiActions extends StatelessWidget {
-  const _AiActions();
+/// Compact quick-actions row: Coach AI, Scansiona, Nutrizione.
+class _QuickActions extends StatelessWidget {
+  const _QuickActions();
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
-          child: _AiCard(
+          child: _QuickAction(
             icon: Icons.auto_awesome,
             label: 'Coach AI',
-            subtitle: 'Genera scheda',
             onTap: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute(builder: (_) => const CoachOnboardingScreen()),
             ),
@@ -209,12 +217,22 @@ class _AiActions extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _AiCard(
+          child: _QuickAction(
             icon: Icons.camera_alt,
             label: 'Scansiona',
-            subtitle: 'Riconosci attrezzo',
             onTap: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute(builder: (_) => const VisionScanScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: _QuickAction(
+            icon: Icons.restaurant_menu,
+            label: 'Nutrizione',
+            color: AppColors.success,
+            onTap: () => Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(builder: (_) => const NutritionScreen()),
             ),
           ),
         ),
@@ -223,147 +241,66 @@ class _AiActions extends StatelessWidget {
   }
 }
 
-/// Full-width entry to the Nutrition screen.
-class _NutritionCard extends StatelessWidget {
-  const _NutritionCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassmorphismCard(
-      onTap: () => Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(builder: (_) => const NutritionScreen()),
-      ),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      borderColor: AppColors.success.withValues(alpha: 0.25),
-      child: Row(
-        children: [
-          const Icon(Icons.restaurant_menu, color: AppColors.success, size: 26),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Nutrizione',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  'Calorie e macro su misura + menù',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-        ],
-      ),
-    );
-  }
-}
-
-class _AiCard extends StatelessWidget {
-  const _AiCard({
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
     required this.icon,
     required this.label,
-    required this.subtitle,
     required this.onTap,
+    this.color = AppColors.primary,
   });
 
   final IconData icon;
   final String label;
-  final String subtitle;
   final VoidCallback onTap;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return GlassmorphismCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      borderColor: AppColors.primary.withValues(alpha: 0.25),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.primary, size: 26),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Collapsible card showing the plan description / AI coach explanation
-/// (current situation, objective, progression). Persisted on the plan.
-class _PlanInfoCard extends StatefulWidget {
-  const _PlanInfoCard({required this.text});
-  final String text;
-
-  @override
-  State<_PlanInfoCard> createState() => _PlanInfoCardState();
-}
-
-class _PlanInfoCardState extends State<_PlanInfoCard> {
-  bool _expanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassmorphismCard(
-      onTap: () => setState(() => _expanded = !_expanded),
-      padding: const EdgeInsets.all(AppSpacing.md),
-      borderColor: AppColors.primary.withValues(alpha: 0.25),
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.sm, horizontal: AppSpacing.xs),
+      borderColor: color.withValues(alpha: 0.25),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome, color: AppColors.primary, size: 18),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text('Info scheda',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(fontWeight: FontWeight.w700)),
-              ),
-              Icon(_expanded ? Icons.expand_less : Icons.expand_more,
-                  color: AppColors.textSecondary),
-            ],
-          ),
+          Icon(icon, color: color, size: 22),
           const SizedBox(height: 4),
           Text(
-            widget.text,
-            maxLines: _expanded ? null : 2,
-            overflow: _expanded ? null : TextOverflow.ellipsis,
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context)
                 .textTheme
-                .bodyMedium
-                ?.copyWith(color: AppColors.textSecondary),
+                .labelMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),
     );
   }
+}
+
+/// Show the plan description / AI coach explanation in a dialog.
+void _showPlanInfo(BuildContext context, String text) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.bgSecondary,
+      title: const Row(
+        children: [
+          Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+          SizedBox(width: AppSpacing.sm),
+          Text('Info scheda'),
+        ],
+      ),
+      content: SingleChildScrollView(child: Text(text)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Chiudi'),
+        ),
+      ],
+    ),
+  );
 }

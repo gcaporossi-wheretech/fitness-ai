@@ -211,16 +211,36 @@ class WorkoutService:
             pump_rating: Optional pump-sensation rating (1-5).
 
         Returns:
-            Created WorkoutSession object.
+            Created (or updated) WorkoutSession object.
 
         Raises:
-            DuplicateClientIdError: If client_id already exists.
+            DuplicateClientIdError: If the client_id belongs to another user.
         """
-        existing = await self.db.execute(
+        result = await self.db.execute(
             select(WorkoutSession).where(WorkoutSession.client_id == client_id)
         )
-        if existing.scalar_one_or_none():
-            raise DuplicateClientIdError(client_id)
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            # Same client_id from the same user = a re-uploaded session (e.g. a
+            # finished workout reopened via "resume" and edited). Update it in
+            # place (last-write-wins) instead of rejecting, so the edits persist
+            # server-side. A collision across users is still an error.
+            if existing.user_id != user_id:
+                raise DuplicateClientIdError(client_id)
+            existing.plan_id = plan_id
+            existing.day_name = day_name
+            existing.started_at = started_at
+            existing.completed_at = completed_at
+            existing.duration_seconds = duration_seconds
+            existing.exercises = exercises
+            existing.notes = notes
+            existing.overall_rating = overall_rating
+            existing.fatigue_rating = fatigue_rating
+            existing.pump_rating = pump_rating
+            existing.synced_at = datetime.now(UTC)
+            await self.db.commit()
+            await self.db.refresh(existing)
+            return existing
 
         session = WorkoutSession(
             user_id=user_id,
