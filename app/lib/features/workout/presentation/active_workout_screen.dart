@@ -201,6 +201,20 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     final hasWarmup = sessionState.warmup.isNotEmpty;
     final warmupOffset = hasWarmup ? 1 : 0;
 
+    // Group consecutive exercises sharing a superset id so they render together.
+    final groups = <List<int>>[];
+    String? lastGroup;
+    for (var i = 0; i < session.exercises.length; i++) {
+      final g = session.exercises[i].supersetGroup;
+      final gid = (g != null && g.trim().isNotEmpty) ? g.trim() : null;
+      if (gid != null && gid == lastGroup && groups.isNotEmpty) {
+        groups.last.add(i);
+      } else {
+        groups.add([i]);
+      }
+      lastGroup = gid;
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -262,21 +276,34 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
               child: ListView.builder(
                 padding:
                     const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                itemCount: session.exercises.length + 1 + warmupOffset,
+                itemCount: groups.length + 1 + warmupOffset,
                 itemBuilder: (context, index) {
                   if (hasWarmup && index == 0) {
                     return const _WarmupChecklist();
                   }
-                  final exIndex = index - warmupOffset;
-                  if (exIndex == session.exercises.length) {
+                  final gIndex = index - warmupOffset;
+                  if (gIndex == groups.length) {
                     return _AddExerciseButton(
                       onAdd: _addExercise,
                     );
                   }
-                  return _ExerciseCard(
-                    exercise: session.exercises[exIndex],
-                    exerciseIndex: exIndex,
-                    onSetCompleted: (setIndex) => _onSetCompleted(
+                  final group = groups[gIndex];
+                  if (group.length == 1) {
+                    final exIndex = group.first;
+                    return _ExerciseCard(
+                      exercise: session.exercises[exIndex],
+                      exerciseIndex: exIndex,
+                      onSetCompleted: (setIndex) => _onSetCompleted(
+                        session.exercises[exIndex],
+                        exIndex,
+                        setIndex,
+                      ),
+                    );
+                  }
+                  return _SupersetCard(
+                    exercises: [for (final i in group) session.exercises[i]],
+                    indices: group,
+                    onSetCompleted: (exIndex, setIndex) => _onSetCompleted(
                       session.exercises[exIndex],
                       exIndex,
                       setIndex,
@@ -410,9 +437,10 @@ class _CompletionDialogState extends State<_CompletionDialog> {
   }
 }
 
-/// Card for a single exercise showing all its sets inline.
-class _ExerciseCard extends ConsumerWidget {
-  const _ExerciseCard({
+/// The inner content of one exercise (header + set rows + controls).
+/// Reused standalone (in [_ExerciseCard]) and grouped (in [_SupersetCard]).
+class _ExerciseBody extends ConsumerWidget {
+  const _ExerciseBody({
     required this.exercise,
     required this.exerciseIndex,
     required this.onSetCompleted,
@@ -424,16 +452,7 @@ class _ExerciseCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return StaggeredListItem(
-      index: exerciseIndex,
-      child: GlassmorphismCard(
-        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        borderColor: exercise.isComplete
-            ? AppColors.success.withValues(alpha: 0.3)
-            : exercise.skipped
-                ? AppColors.textDisabled.withValues(alpha: 0.2)
-                : AppColors.primary.withValues(alpha: 0.1),
-        child: Column(
+    return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Exercise header
@@ -552,6 +571,111 @@ class _ExerciseCard extends ConsumerWidget {
                       ),
                     ),
                 ],
+              ),
+            ],
+          ],
+        );
+  }
+}
+
+/// Card for a single exercise showing all its sets inline.
+class _ExerciseCard extends StatelessWidget {
+  const _ExerciseCard({
+    required this.exercise,
+    required this.exerciseIndex,
+    required this.onSetCompleted,
+  });
+
+  final ExerciseLog exercise;
+  final int exerciseIndex;
+  final void Function(int setIndex) onSetCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    return StaggeredListItem(
+      index: exerciseIndex,
+      child: GlassmorphismCard(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        borderColor: exercise.isComplete
+            ? AppColors.success.withValues(alpha: 0.3)
+            : exercise.skipped
+                ? AppColors.textDisabled.withValues(alpha: 0.2)
+                : AppColors.primary.withValues(alpha: 0.1),
+        child: _ExerciseBody(
+          exercise: exercise,
+          exerciseIndex: exerciseIndex,
+          onSetCompleted: onSetCompleted,
+        ),
+      ),
+    );
+  }
+}
+
+/// Card grouping a superset: two or more exercises performed back-to-back.
+class _SupersetCard extends StatelessWidget {
+  const _SupersetCard({
+    required this.exercises,
+    required this.indices,
+    required this.onSetCompleted,
+  });
+
+  final List<ExerciseLog> exercises;
+  final List<int> indices;
+  final void Function(int exerciseIndex, int setIndex) onSetCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final allDone = exercises.every((e) => e.isComplete || e.skipped);
+    return StaggeredListItem(
+      index: indices.first,
+      child: GlassmorphismCard(
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        borderColor: allDone
+            ? AppColors.success.withValues(alpha: 0.3)
+            : AppColors.warning.withValues(alpha: 0.4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bolt, color: AppColors.warning, size: 18),
+                const SizedBox(width: AppSpacing.xs),
+                const Text(
+                  'SUPERSET',
+                  style: TextStyle(
+                    color: AppColors.warning,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'esegui di fila, recupero alla fine del giro',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+            for (int j = 0; j < exercises.length; j++) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Divider(
+                  color: AppColors.textDisabled.withValues(alpha: 0.2),
+                  height: 1,
+                ),
+              ),
+              _ExerciseBody(
+                exercise: exercises[j],
+                exerciseIndex: indices[j],
+                onSetCompleted: (setIndex) =>
+                    onSetCompleted(indices[j], setIndex),
               ),
             ],
           ],

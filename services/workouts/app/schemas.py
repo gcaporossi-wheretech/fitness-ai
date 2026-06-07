@@ -22,6 +22,7 @@ class ExerciseInDay(BaseModel):
     rest_seconds: int | None = Field(None, ge=0, le=600)
     notes: str | None = None
     exercise_type: str | None = None
+    superset_group: str | None = None
 
 
 class WorkoutDay(BaseModel):
