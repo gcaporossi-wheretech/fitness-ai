@@ -396,6 +396,32 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
     _save();
   }
 
+  /// Resume a previously saved session (e.g. finished by mistake) so it can be
+  /// continued and completed. Keeps the same id, plan and start time; clears
+  /// the completed flag and marks it unsynced so it re-syncs once finished.
+  void resumeSession(WorkoutSession session) {
+    final resumed = WorkoutSession(
+      id: session.id,
+      planId: session.planId,
+      dayName: session.dayName,
+      startedAt: session.startedAt,
+      completedAt: null,
+      durationSeconds: null,
+      exercises: session.exercises,
+      notes: session.notes,
+      synced: false,
+      overallRating: session.overallRating,
+      fatigueRating: session.fatigueRating,
+      pumpRating: session.pumpRating,
+    );
+    state = ActiveSessionState(
+      session: resumed,
+      warmup: const [],
+      warmupChecked: const [],
+    );
+    _save();
+  }
+
   /// Close and discard the active session UI.
   void closeSession() {
     state = null;
