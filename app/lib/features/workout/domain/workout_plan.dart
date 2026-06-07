@@ -114,6 +114,7 @@ class PlannedExercise {
     this.restSeconds = 90,
     this.exerciseType = 'weighted',
     this.notes,
+    this.supersetGroup,
   });
 
   final String? exerciseId;
@@ -124,6 +125,10 @@ class PlannedExercise {
   final String exerciseType;
   final String? notes;
 
+  /// Superset group id: consecutive exercises with the same value are a
+  /// superset (performed back-to-back, shown grouped).
+  final String? supersetGroup;
+
   factory PlannedExercise.fromJson(Map<String, dynamic> json) {
     return PlannedExercise(
       exerciseId: json['exercise_id']?.toString(),
@@ -133,6 +138,8 @@ class PlannedExercise {
       restSeconds: (json['rest_seconds'] ?? 90) as int,
       exerciseType: (json['exercise_type'] ?? 'weighted') as String,
       notes: json['notes'] as String?,
+      supersetGroup:
+          (json['superset_group'] ?? json['supersetGroup']) as String?,
     );
   }
 
@@ -144,5 +151,6 @@ class PlannedExercise {
         'rest_seconds': restSeconds,
         'exercise_type': exerciseType,
         'notes': notes,
+        'superset_group': supersetGroup,
       };
 }

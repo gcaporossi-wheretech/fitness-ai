@@ -11,6 +11,7 @@ class ExerciseLog {
     this.restSeconds = 90,
     this.skipped = false,
     this.notes = '',
+    this.supersetGroup,
   });
 
   final String exerciseId;
@@ -22,6 +23,10 @@ class ExerciseLog {
   final bool skipped;
   final String notes;
 
+  /// Superset group id: consecutive exercises sharing a non-null value are
+  /// performed back-to-back and shown grouped together.
+  final String? supersetGroup;
+
   ExerciseLog copyWith({
     String? exerciseId,
     String? exerciseName,
@@ -31,6 +36,7 @@ class ExerciseLog {
     List<SetLog>? sets,
     bool? skipped,
     String? notes,
+    String? supersetGroup,
   }) {
     return ExerciseLog(
       exerciseId: exerciseId ?? this.exerciseId,
@@ -41,6 +47,7 @@ class ExerciseLog {
       sets: sets ?? this.sets,
       skipped: skipped ?? this.skipped,
       notes: notes ?? this.notes,
+      supersetGroup: supersetGroup ?? this.supersetGroup,
     );
   }
 
@@ -68,6 +75,8 @@ class ExerciseLog {
           .toList(),
       skipped: (json['skipped'] ?? false) as bool,
       notes: (json['notes'] ?? '') as String,
+      supersetGroup:
+          (json['superset_group'] ?? json['supersetGroup']) as String?,
     );
   }
 
@@ -80,6 +89,7 @@ class ExerciseLog {
         'sets': sets.map((s) => s.toJson()).toList(),
         'skipped': skipped,
         'notes': notes,
+        'superset_group': supersetGroup,
       };
 
   /// API format for creating sessions.

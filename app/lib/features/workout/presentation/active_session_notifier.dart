@@ -109,6 +109,7 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
         exerciseType: ep.exerciseType,
         restSeconds: ep.restSeconds,
         notes: ep.notes ?? '',
+        supersetGroup: ep.supersetGroup,
         sets: List.generate(ep.sets, (i) {
           // Use the matching set index if available, otherwise the last
           // weighted set from that exercise's most recent session.
