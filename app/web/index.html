@@ -35,6 +35,21 @@
   <script src="webauthn.js"></script>
 </head>
 <body>
+  <!--
+    Self-heal for iOS/Safari installed PWAs: when a new service worker takes
+    control after a deploy, reload once so the page never gets stuck on a stale
+    cached shell (the classic white screen after an update).
+  -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      var __reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (__reloaded) return;
+        __reloaded = true;
+        window.location.reload();
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

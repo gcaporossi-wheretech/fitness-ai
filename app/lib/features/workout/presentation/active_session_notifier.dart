@@ -367,9 +367,13 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
     // correcting/adding to a past workout, not training again from the original
     // start time — recomputing now - startedAt would give absurd values like 60h).
     final elapsed = DateTime.now().difference(s.session.startedAt).inSeconds;
+    // Defensive cap: a real gym session is never longer than ~4h. Anything
+    // beyond means the user left the app open and forgot to finish, so we clamp
+    // it instead of storing an absurd duration.
+    const maxSessionSeconds = 4 * 60 * 60;
     final duration = s.resumed
-        ? (s.session.durationSeconds ?? elapsed)
-        : elapsed;
+        ? (s.session.durationSeconds ?? elapsed.clamp(0, maxSessionSeconds))
+        : elapsed.clamp(0, maxSessionSeconds);
     state = s.copyWith(
       session: s.session.copyWith(
         completedAt: DateTime.now(),
