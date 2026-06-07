@@ -59,10 +59,37 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     }
   }
 
-  void _finishWorkout() {
-    final notifier = ref.read(activeSessionProvider.notifier);
-    notifier.completeSession();
+  Future<void> _finishWorkout() async {
+    // Confirm first: finishing is final (can't be resumed), so guard against
+    // an accidental tap on FINE.
+    final state = ref.read(activeSessionProvider);
+    final done = state?.completedExercises ?? 0;
+    final total = state?.totalExercises ?? 0;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.bgSecondary,
+        title: const Text('Terminare l\'allenamento?'),
+        content: Text(
+            'Hai completato $done/$total esercizi. Una volta terminato non '
+            'potrai riprenderlo.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Continua'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Termina',
+                style: TextStyle(
+                    color: AppColors.success, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
 
+    ref.read(activeSessionProvider.notifier).completeSession();
     // Show rating dialog first, then completion screen
     _showRatingDialog();
   }
@@ -470,7 +497,9 @@ class _ExerciseCard extends ConsumerWidget {
                 child: Row(
                   children: [
                     const SizedBox(width: 32, child: Text('SET', style: _headerStyle)),
-                    if (exercise.exerciseType == 'weighted') ...[
+                    if (exercise.exerciseType == 'cardio') ...[
+                      const Expanded(child: SizedBox()),
+                    ] else if (exercise.exerciseType == 'weighted') ...[
                       const Expanded(child: Text('KG', style: _headerStyle, textAlign: TextAlign.center)),
                       const Expanded(child: Text('REPS', style: _headerStyle, textAlign: TextAlign.center)),
                     ] else if (exercise.exerciseType == 'timed') ...[

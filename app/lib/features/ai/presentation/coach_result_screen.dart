@@ -134,10 +134,26 @@ class CoachResultScreen extends ConsumerWidget {
                     onPressed: () async {
                       final messenger = ScaffoldMessenger.of(context);
                       final navigator = Navigator.of(context);
+                      // Persist the AI explanation (situation/objective +
+                      // overview + progression) on the plan so it can be read
+                      // again later from the workout screen.
+                      final desc = [
+                        if (result.assessment != null &&
+                            result.assessment!.trim().isNotEmpty)
+                          result.assessment!.trim(),
+                        if (result.description.trim().isNotEmpty)
+                          result.description.trim(),
+                        if (result.notes != null && result.notes!.trim().isNotEmpty)
+                          'Progressione: ${result.notes!.trim()}',
+                        if (result.photoReviewWeeks != null &&
+                            result.photoReviewWeeks! > 0)
+                          'Rifai le foto tra ${result.photoReviewWeeks} settimane.',
+                      ].join('\n\n');
                       try {
                         await ref.read(workoutRepositoryProvider).createPlan(
                               name: result.planName,
                               days: result.days,
+                              description: desc.isEmpty ? null : desc,
                             );
                         ref.invalidate(activePlanProvider);
                         messenger.showSnackBar(const SnackBar(

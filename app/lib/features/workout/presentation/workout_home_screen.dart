@@ -92,6 +92,11 @@ class _PlanView extends ConsumerWidget {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: AppSpacing.md),
+        if (plan.description != null && plan.description!.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+            child: _PlanInfoCard(text: plan.description!.trim()),
+          ),
         Expanded(
           child: ListView.separated(
             itemCount: plan.days.length,
@@ -303,6 +308,59 @@ class _AiCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Collapsible card showing the plan description / AI coach explanation
+/// (current situation, objective, progression). Persisted on the plan.
+class _PlanInfoCard extends StatefulWidget {
+  const _PlanInfoCard({required this.text});
+  final String text;
+
+  @override
+  State<_PlanInfoCard> createState() => _PlanInfoCardState();
+}
+
+class _PlanInfoCardState extends State<_PlanInfoCard> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassmorphismCard(
+      onTap: () => setState(() => _expanded = !_expanded),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      borderColor: AppColors.primary.withValues(alpha: 0.25),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: AppColors.primary, size: 18),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text('Info scheda',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+              ),
+              Icon(_expanded ? Icons.expand_less : Icons.expand_more,
+                  color: AppColors.textSecondary),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.text,
+            maxLines: _expanded ? null : 2,
+            overflow: _expanded ? null : TextOverflow.ellipsis,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
