@@ -95,16 +95,30 @@ async def test_create_session_no_auth(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_create_session_duplicate_client_id(client: AsyncClient, auth_headers: dict):
-    """Creating two sessions with the same client_id should return 409."""
+async def test_create_session_same_client_id_upserts(client: AsyncClient, auth_headers: dict):
+    """Re-posting the same client_id should update the session (resume/edit), not duplicate."""
     client_id = str(uuid.uuid4())
     payload = make_session_data(client_id)
 
     first = await client.post("/workouts/sessions", json=payload, headers=auth_headers)
     assert first.status_code == 201
+    first_id = first.json()["id"]
 
+    # Resume + edit: same client_id, changed notes/duration.
+    payload["notes"] = "Added treadmill"
+    payload["duration_seconds"] = 4200
     second = await client.post("/workouts/sessions", json=payload, headers=auth_headers)
-    assert second.status_code == 409
+    assert second.status_code == 201
+    body = second.json()
+    # Same server row, updated fields.
+    assert body["id"] == first_id
+    assert body["notes"] == "Added treadmill"
+    assert body["duration_seconds"] == 4200
+
+    # And the history still contains exactly one session for this client_id.
+    listing = await client.get("/workouts/sessions", headers=auth_headers)
+    matches = [s for s in listing.json()["items"] if s["client_id"] == client_id]
+    assert len(matches) == 1
 
 
 @pytest.mark.asyncio

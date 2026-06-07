@@ -195,8 +195,12 @@ class _ActiveWorkoutScreenState extends ConsumerState<ActiveWorkoutScreen> {
     }
 
     final session = sessionState.session;
-    final elapsed = DateTime.now().difference(session.startedAt);
-    final elapsedMin = elapsed.inMinutes;
+    // For a resumed session show the original (saved) duration; otherwise the
+    // live elapsed time. Recomputing now - startedAt for a resumed past session
+    // would show an absurd value (the workout was hours/days ago).
+    final elapsedMin = sessionState.resumed
+        ? ((session.durationSeconds ?? 0) ~/ 60)
+        : DateTime.now().difference(session.startedAt).inMinutes;
 
     final hasWarmup = sessionState.warmup.isNotEmpty;
     final warmupOffset = hasWarmup ? 1 : 0;

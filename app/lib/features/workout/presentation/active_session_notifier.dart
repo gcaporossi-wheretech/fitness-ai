@@ -14,11 +14,16 @@ class ActiveSessionState {
     this.isCompleted = false,
     this.warmup = const [],
     this.warmupChecked = const [],
+    this.resumed = false,
   });
 
   final WorkoutSession session;
   final int currentExerciseIndex;
   final bool isCompleted;
+
+  /// True when this session was reopened from history (resume). The original
+  /// duration is preserved instead of recomputing from the start time.
+  final bool resumed;
 
   /// Warmup items for this day (their text labels).
   final List<String> warmup;
@@ -49,6 +54,7 @@ class ActiveSessionState {
     bool? isCompleted,
     List<String>? warmup,
     List<bool>? warmupChecked,
+    bool? resumed,
   }) {
     return ActiveSessionState(
       session: session ?? this.session,
@@ -56,6 +62,7 @@ class ActiveSessionState {
       isCompleted: isCompleted ?? this.isCompleted,
       warmup: warmup ?? this.warmup,
       warmupChecked: warmupChecked ?? this.warmupChecked,
+      resumed: resumed ?? this.resumed,
     );
   }
 }
@@ -356,7 +363,13 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
     final s = state;
     if (s == null) return;
 
-    final duration = DateTime.now().difference(s.session.startedAt).inSeconds;
+    // For a resumed session we keep the original duration (the user is just
+    // correcting/adding to a past workout, not training again from the original
+    // start time — recomputing now - startedAt would give absurd values like 60h).
+    final elapsed = DateTime.now().difference(s.session.startedAt).inSeconds;
+    final duration = s.resumed
+        ? (s.session.durationSeconds ?? elapsed)
+        : elapsed;
     state = s.copyWith(
       session: s.session.copyWith(
         completedAt: DateTime.now(),
@@ -407,7 +420,9 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
       dayName: session.dayName,
       startedAt: session.startedAt,
       completedAt: null,
-      durationSeconds: null,
+      // Keep the original duration so re-completing doesn't recompute an absurd
+      // value from the original start time (see completeSession).
+      durationSeconds: session.durationSeconds,
       exercises: session.exercises,
       notes: session.notes,
       synced: false,
@@ -417,6 +432,7 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
     );
     state = ActiveSessionState(
       session: resumed,
+      resumed: true,
       warmup: const [],
       warmupChecked: const [],
     );
