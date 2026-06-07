@@ -59,41 +59,31 @@ class RestTimerBar extends StatelessWidget {
                 children: [
                   Icon(Icons.timer_outlined, color: accent, size: 20),
                   const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'RECUPERO',
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        if (exerciseName != null && currentSet != null)
-                          Text(
-                            'Serie $currentSet/$totalSets · $exerciseName',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
+                  // Fixed-width countdown (mm:ss) so the row height never jumps.
                   Text(
                     timer.formattedTime,
                     style: TextStyle(
-                      fontSize: 26,
+                      fontSize: 22,
                       fontWeight: FontWeight.w900,
                       color:
                           danger ? AppColors.warning : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  // Single, non-wrapping label (truncates instead of wrapping).
+                  Expanded(
+                    child: Text(
+                      exerciseName != null && currentSet != null
+                          ? 'Recupero · Serie $currentSet/$totalSets'
+                          : 'Recupero',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),

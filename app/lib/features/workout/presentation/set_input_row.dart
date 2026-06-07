@@ -107,6 +107,14 @@ class _SetInputRowState extends ConsumerState<SetInputRow> {
           reps: reps,
         );
         break;
+      case 'cardio':
+        // No metrics to log — just mark the set complete.
+        notifier.logBodyweightSet(
+          exerciseIndex: widget.exerciseIndex,
+          setIndex: widget.setIndex,
+          reps: 0,
+        );
+        break;
     }
 
     widget.onCompleted();
@@ -153,7 +161,21 @@ class _SetInputRowState extends ConsumerState<SetInputRow> {
             ),
           ),
           // Input fields based on exercise type
-          if (widget.exerciseType == 'weighted') ...[
+          if (widget.exerciseType == 'cardio') ...[
+            // Cardio: no weight/reps — details are in the exercise note; just
+            // mark it done.
+            Expanded(
+              child: Center(
+                child: Text(
+                  isCompleted ? 'Completato' : 'Segna come fatto',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          ] else if (widget.exerciseType == 'weighted') ...[
             Expanded(
               child: _CompactInput(
                 controller: _weightController,

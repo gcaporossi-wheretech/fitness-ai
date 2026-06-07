@@ -21,6 +21,7 @@ class ExerciseInDay(BaseModel):
     reps: str | None = None
     rest_seconds: int | None = Field(None, ge=0, le=600)
     notes: str | None = None
+    exercise_type: str | None = None
 
 
 class WorkoutDay(BaseModel):
