@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/workout/domain/workout_session.dart';
+import 'package:fitness_ai/features/workout/presentation/active_session_notifier.dart';
+import 'package:fitness_ai/features/workout/presentation/active_workout_screen.dart';
 
 /// Detail screen for a completed workout session.
 /// Shows all exercises with their sets, weights, and reps.
-class SessionDetailScreen extends StatelessWidget {
+class SessionDetailScreen extends ConsumerWidget {
   const SessionDetailScreen({super.key, required this.session});
   final WorkoutSession session;
 
+  void _resume(BuildContext context, WidgetRef ref) {
+    ref.read(activeSessionProvider.notifier).resumeSession(session);
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => const ActiveWorkoutScreen()),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFormat = DateFormat('EEEE d MMMM yyyy, HH:mm', 'it');
 
     return Scaffold(
@@ -22,6 +32,13 @@ class SessionDetailScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
+            // Resume the workout (e.g. if it was finished by mistake).
+            GlowButton(
+              label: 'Riprendi allenamento',
+              icon: Icons.play_arrow,
+              onPressed: () => _resume(context, ref),
+            ),
+            const SizedBox(height: AppSpacing.md),
             // Session summary card
             GlassmorphismCard(
               borderColor: AppColors.success.withValues(alpha: 0.2),
