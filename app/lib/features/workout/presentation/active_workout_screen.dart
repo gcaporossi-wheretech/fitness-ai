@@ -456,6 +456,8 @@ class _ExerciseBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final total = ref.watch(
+        activeSessionProvider.select((s) => s?.totalExercises ?? 0));
     return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -491,8 +493,24 @@ class _ExerciseBody extends ConsumerWidget {
                     ],
                   ),
                 ),
+                // Reorder up/down — lets the user change exercise order mid-workout.
+                _ReorderArrow(
+                  icon: Icons.keyboard_arrow_up,
+                  enabled: exerciseIndex > 0,
+                  onPressed: () => ref
+                      .read(activeSessionProvider.notifier)
+                      .moveExercise(exerciseIndex, exerciseIndex - 1),
+                ),
+                _ReorderArrow(
+                  icon: Icons.keyboard_arrow_down,
+                  enabled: exerciseIndex < total - 1,
+                  onPressed: () => ref
+                      .read(activeSessionProvider.notifier)
+                      .moveExercise(exerciseIndex, exerciseIndex + 1),
+                ),
                 // Skip / Unskip
                 IconButton(
+                  visualDensity: VisualDensity.compact,
                   icon: Icon(
                     exercise.skipped ? Icons.undo : Icons.skip_next,
                     color: AppColors.textSecondary,
@@ -640,30 +658,32 @@ class _SupersetCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.bolt, color: AppColors.warning, size: 18),
-                const SizedBox(width: AppSpacing.xs),
-                const Text(
-                  'SUPERSET',
-                  style: TextStyle(
-                    color: AppColors.warning,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.bolt, color: AppColors.warning, size: 18),
+                    SizedBox(width: AppSpacing.xs),
+                    Text(
+                      'SUPERSET',
+                      style: TextStyle(
+                        color: AppColors.warning,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'esegui di fila, recupero alla fine del giro',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.textSecondary),
-                  ),
+                const SizedBox(height: 2),
+                // Full description on its own line so it's never truncated.
+                Text(
+                  'Esegui gli esercizi di fila, recupero alla fine del giro',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -695,6 +715,34 @@ const _headerStyle = TextStyle(
   fontWeight: FontWeight.w600,
   letterSpacing: 0.5,
 );
+
+/// Compact up/down control to reorder an exercise during a workout.
+class _ReorderArrow extends StatelessWidget {
+  const _ReorderArrow({
+    required this.icon,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 32),
+      iconSize: 24,
+      tooltip: icon == Icons.keyboard_arrow_up ? 'Sposta su' : 'Sposta giù',
+      icon: Icon(icon),
+      color: AppColors.textSecondary,
+      disabledColor: AppColors.textDisabled.withValues(alpha: 0.3),
+      onPressed: enabled ? onPressed : null,
+    );
+  }
+}
 
 /// Summary row in the completion dialog.
 class _SummaryRow extends StatelessWidget {

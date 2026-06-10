@@ -350,6 +350,26 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
     _save();
   }
 
+  /// Reorder exercises: move the one at [oldIndex] to [newIndex].
+  /// Used by the up/down controls so the user can change the order during a
+  /// workout (and reposition an exercise added at the end).
+  void moveExercise(int oldIndex, int newIndex) {
+    final s = state;
+    if (s == null) return;
+    final exercises = List<ExerciseLog>.from(s.session.exercises);
+    if (oldIndex < 0 || oldIndex >= exercises.length) return;
+    if (newIndex < 0 || newIndex >= exercises.length) return;
+    if (oldIndex == newIndex) return;
+
+    final moved = exercises.removeAt(oldIndex);
+    exercises.insert(newIndex, moved);
+
+    state = s.copyWith(
+      session: s.session.copyWith(exercises: exercises),
+    );
+    _save();
+  }
+
   /// Move to a specific exercise index.
   void goToExercise(int index) {
     final s = state;
