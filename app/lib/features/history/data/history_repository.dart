@@ -18,16 +18,26 @@ class HistoryRepository {
   /// Parsing is per-record defensive: a single malformed cached entry can
   /// never blank the whole screen.
   List<WorkoutSession> getLocalSessions() {
-    final out = <WorkoutSession>[];
+    // Dedup by (clientId ?? id): a workout can exist both as the local copy
+    // (id = local uuid) and as the copy fetched back from the server (id =
+    // server uuid, clientId = local uuid). Prefer the server copy.
+    final byKey = <String, WorkoutSession>{};
     for (final m in HiveStorage.sessions.values) {
       try {
         final s = WorkoutSession.fromJson(Map<String, dynamic>.from(m));
-        if (s.isCompleted) out.add(s);
+        if (!s.isCompleted) continue;
+        final key = s.clientId ?? s.id;
+        final existing = byKey[key];
+        // Keep the server copy (the one carrying a clientId) when both exist.
+        if (existing == null || (existing.clientId == null && s.clientId != null)) {
+          byKey[key] = s;
+        }
       } catch (_) {
         // skip corrupt/incompatible cached record
       }
     }
-    out.sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    final out = byKey.values.toList()
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
     return out;
   }
 
@@ -69,10 +79,16 @@ class HistoryRepository {
               WorkoutSession.fromJson(item as Map<String, dynamic>))
           .toList();
 
-      // Cache locally
+      // Cache locally. Each server session carries the original client_id; if a
+      // pre-sync local copy is still stored under that id, remove it so the
+      // workout isn't shown twice.
       for (final session in sessions) {
         final cached = session.copyWith(synced: true);
         await HiveStorage.sessions.put(cached.id, cached.toJson());
+        final cid = session.clientId;
+        if (cid != null && cid != cached.id) {
+          await HiveStorage.sessions.delete(cid);
+        }
       }
 
       return sessions;

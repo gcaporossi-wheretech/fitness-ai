@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:fitness_ai/core/sync/sync_service.dart';
 import 'package:fitness_ai/features/workout/data/workout_repository.dart';
 import 'package:fitness_ai/features/workout/domain/exercise_log.dart';
 import 'package:fitness_ai/features/workout/domain/set_log.dart';
@@ -70,9 +73,28 @@ class ActiveSessionState {
 /// Manages the active workout session state.
 class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
   @override
-  ActiveSessionState? build() => null;
+  ActiveSessionState? build() => _restoreInProgress();
 
   WorkoutRepository get _repo => ref.read(workoutRepositoryProvider);
+
+  /// Restore an unfinished session from local storage so an in-progress
+  /// workout survives the app being reloaded/evicted (e.g. iOS killing the PWA
+  /// after the user leaves it idle during cardio). Only a recent (< 24h) session
+  /// is restored; older orphans are ignored.
+  ActiveSessionState? _restoreInProgress() {
+    try {
+      final inProgress = _repo
+          .getAllLocalSessions() // newest-first
+          .where((s) => !s.isCompleted)
+          .toList();
+      if (inProgress.isEmpty) return null;
+      final s = inProgress.first;
+      if (DateTime.now().difference(s.startedAt).inHours > 24) return null;
+      return ActiveSessionState(session: s);
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Start a new session from a workout day plan.
   /// Pre-fills weights from the last completed session for the same day.
@@ -402,6 +424,10 @@ class ActiveSessionNotifier extends Notifier<ActiveSessionState?> {
       isCompleted: true,
     );
     _save();
+    // Push the finished workout to the server right away so it's never lost if
+    // the local cache is later cleared. Fire-and-forget; the periodic sync is a
+    // backup. Reading the provider also keeps the background sync alive.
+    unawaited(ref.read(syncServiceProvider).syncAll());
   }
 
   /// Toggle a warmup item checkbox.

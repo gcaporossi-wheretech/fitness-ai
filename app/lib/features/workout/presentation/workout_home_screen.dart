@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:fitness_ai/core/sync/sync_service.dart';
 import 'package:fitness_ai/core/theme/app_colors.dart';
 import 'package:fitness_ai/core/theme/app_spacing.dart';
 import 'package:fitness_ai/core/widgets/widgets.dart';
 import 'package:fitness_ai/features/workout/domain/workout_plan.dart';
+import 'package:fitness_ai/features/workout/domain/workout_session.dart';
 import 'package:fitness_ai/features/workout/presentation/active_plan_provider.dart';
 import 'package:fitness_ai/features/workout/presentation/active_session_notifier.dart';
 import 'package:fitness_ai/features/workout/presentation/active_workout_screen.dart';
@@ -21,6 +23,13 @@ class WorkoutHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final planAsync = ref.watch(activePlanProvider);
+    // Keep the background sync service alive while the app is open so finished
+    // workouts get pushed to the server (periodic + on reconnect).
+    ref.watch(syncServiceProvider);
+    // An unfinished session restored from storage (e.g. after the app was
+    // evicted mid-workout) — offer to jump back into it.
+    final active = ref.watch(activeSessionProvider);
+    final hasActive = active != null && !active.isCompleted;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -36,6 +45,10 @@ class WorkoutHomeScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.xs),
               Text('Oggi', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: AppSpacing.sm),
+              if (hasActive) ...[
+                _ResumeBanner(session: active.session),
+                const SizedBox(height: AppSpacing.sm),
+              ],
               const _QuickActions(),
               const SizedBox(height: AppSpacing.md),
               Expanded(
@@ -193,6 +206,50 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Banner shown on the home when there is an unfinished workout to resume,
+/// so an in-progress session is never lost after an app reload.
+class _ResumeBanner extends StatelessWidget {
+  const _ResumeBanner({required this.session});
+
+  final WorkoutSession session;
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassmorphismCard(
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(builder: (_) => const ActiveWorkoutScreen()),
+      ),
+      borderColor: AppColors.warning.withValues(alpha: 0.5),
+      child: Row(
+        children: [
+          const Icon(Icons.play_circle_fill,
+              color: AppColors.warning, size: 32),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Allenamento in corso',
+                    style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Riprendi ${session.dayName ?? 'la sessione'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.warning),
+        ],
       ),
     );
   }

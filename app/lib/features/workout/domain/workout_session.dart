@@ -15,9 +15,16 @@ class WorkoutSession {
     this.overallRating = 0,
     this.fatigueRating = 0,
     this.pumpRating = 0,
+    this.clientId,
   });
 
   final String id;
+
+  /// The original local id used as the server dedup key. On a session fetched
+  /// back from the server this holds the local id it was created with, so the
+  /// server copy and the local copy can be recognised as the same workout.
+  final String? clientId;
+
   final String? planId;
   final String? dayName;
   final DateTime startedAt;
@@ -79,6 +86,7 @@ class WorkoutSession {
     int? overallRating,
     int? fatigueRating,
     int? pumpRating,
+    String? clientId,
   }) {
     return WorkoutSession(
       id: id ?? this.id,
@@ -93,12 +101,14 @@ class WorkoutSession {
       overallRating: overallRating ?? this.overallRating,
       fatigueRating: fatigueRating ?? this.fatigueRating,
       pumpRating: pumpRating ?? this.pumpRating,
+      clientId: clientId ?? this.clientId,
     );
   }
 
   factory WorkoutSession.fromJson(Map<String, dynamic> json) {
     return WorkoutSession(
       id: json['id'].toString(),
+      clientId: json['client_id']?.toString(),
       planId: json['plan_id']?.toString(),
       dayName: json['day_name'] as String?,
       startedAt: json['started_at'] is DateTime
@@ -125,6 +135,7 @@ class WorkoutSession {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'client_id': clientId,
         'plan_id': planId,
         'day_name': dayName,
         'started_at': startedAt.toIso8601String(),
