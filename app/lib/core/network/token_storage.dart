@@ -1,14 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'package:fitness_ai/core/storage/hive_storage.dart';
+
 /// Secure storage for JWT tokens.
 ///
 /// Uses flutter_secure_storage (Keychain on iOS, EncryptedSharedPreferences
-/// on Android). On web, secure-storage reads are unreliable, so we keep an
-/// in-memory copy of the tokens for the current session and treat persistent
-/// storage as best-effort (wrapped in try/catch). This guarantees the access
-/// token is available to the auth interceptor immediately after login on every
-/// platform, while still surviving app restarts where storage works.
+/// on Android). On WEB, secure-storage is unreliable and effectively in-memory,
+/// so tokens were lost whenever the PWA was reloaded/evicted (iOS killing the
+/// tab during cardio), logging the user out. To fix that we also persist tokens
+/// in the Hive `user` box (IndexedDB on web, file on mobile) as a durable,
+/// cross-platform store, with an in-memory cache for speed.
 class TokenStorage {
   TokenStorage({FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
@@ -22,9 +24,23 @@ class TokenStorage {
   static String? _accessMem;
   static String? _refreshMem;
 
-  /// Read the stored access token (memory first, then persistent storage).
+  String? _fromHive(String key) {
+    try {
+      final v = HiveStorage.user.get(key);
+      return (v is String && v.isNotEmpty) ? v : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Read the stored access token (memory → durable Hive → secure storage).
   Future<String?> getAccessToken() async {
     if (_accessMem != null) return _accessMem;
+    final hiveVal = _fromHive(_accessTokenKey);
+    if (hiveVal != null) {
+      _accessMem = hiveVal;
+      return _accessMem;
+    }
     try {
       _accessMem = await _storage.read(key: _accessTokenKey);
     } catch (_) {
@@ -33,9 +49,14 @@ class TokenStorage {
     return _accessMem;
   }
 
-  /// Read the stored refresh token (memory first, then persistent storage).
+  /// Read the stored refresh token (memory → durable Hive → secure storage).
   Future<String?> getRefreshToken() async {
     if (_refreshMem != null) return _refreshMem;
+    final hiveVal = _fromHive(_refreshTokenKey);
+    if (hiveVal != null) {
+      _refreshMem = hiveVal;
+      return _refreshMem;
+    }
     try {
       _refreshMem = await _storage.read(key: _refreshTokenKey);
     } catch (_) {
@@ -52,6 +73,12 @@ class TokenStorage {
     // Memory first so it is immediately usable this session.
     _accessMem = accessToken;
     _refreshMem = refreshToken;
+    // Durable cross-platform store (survives PWA reload/eviction on web).
+    try {
+      await HiveStorage.user.put(_accessTokenKey, accessToken);
+      await HiveStorage.user.put(_refreshTokenKey, refreshToken);
+    } catch (_) {}
+    // Secure storage as a secondary on mobile (best-effort).
     try {
       await Future.wait([
         _storage.write(key: _accessTokenKey, value: accessToken),
@@ -66,6 +93,10 @@ class TokenStorage {
   Future<void> clearTokens() async {
     _accessMem = null;
     _refreshMem = null;
+    try {
+      await HiveStorage.user.delete(_accessTokenKey);
+      await HiveStorage.user.delete(_refreshTokenKey);
+    } catch (_) {}
     try {
       await Future.wait([
         _storage.delete(key: _accessTokenKey),

@@ -27,12 +27,24 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     _loadSessions();
   }
 
-  void _loadSessions() {
+  Future<void> _loadSessions() async {
     final repo = ref.read(historyRepositoryProvider);
+    // Show the local cache immediately...
     setState(() {
       _sessions = repo.getLocalSessions();
       _loading = false;
     });
+    // ...then refresh from the server and merge, so history is recovered even
+    // if the local cache was wiped (e.g. after reinstalling the PWA). Offline
+    // failures are ignored — the local list stays visible.
+    try {
+      await repo.fetchSessions();
+      if (mounted) {
+        setState(() => _sessions = repo.getLocalSessions());
+      }
+    } catch (_) {
+      // offline or server error: keep showing the local cache
+    }
   }
 
   Future<bool> _confirmDelete(WorkoutSession session) async {
@@ -78,10 +90,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
                 AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
-            child: const GradientText(
+            child: GradientText(
               'Storico',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
             ),
