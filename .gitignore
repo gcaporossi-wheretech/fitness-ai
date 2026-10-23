@@ -47,3 +47,6 @@ coverage/
 
 # Logs
 *.log
+
+# Flutter PWA build deployed on the server (infra/aws/deploy-remote.sh)
+webapp/

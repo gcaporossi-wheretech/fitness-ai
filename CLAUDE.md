@@ -43,6 +43,7 @@ App fitness commerciale con AI: riconoscimento macchinari da foto, schede person
 - Commit: `#NNN tipo: descrizione` (feat, fix, refactor, test, docs, ci)
 - PR: sempre verso develop, con checklist review
 - Ogni PR deve passare la pipeline verde
+- Deploy: dal PC `infra/aws/deploy-remote.sh develop` (build PWA, backup DB, migrazioni SQL, container, smoke test) — server `fitness-ai.caporossi.net` (EC2 `Test-Caporossi`, deploy di `develop`). Mai modificare file a mano sul server
 
 ## Cosa NON fare
 1. NON usare Kubernetes — Docker Compose su EC2
