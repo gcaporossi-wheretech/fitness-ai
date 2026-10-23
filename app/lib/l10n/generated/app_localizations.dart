@@ -768,6 +768,108 @@ abstract class S {
   /// In it, this message translates to:
   /// **'Nessun dato disponibile'**
   String get noData;
+
+  /// No description provided for @rateWorkout.
+  ///
+  /// In it, this message translates to:
+  /// **'Com\'e andato l\'allenamento?'**
+  String get rateWorkout;
+
+  /// No description provided for @tapToRate.
+  ///
+  /// In it, this message translates to:
+  /// **'Tocca una stella per votare'**
+  String get tapToRate;
+
+  /// No description provided for @ratingTerrible.
+  ///
+  /// In it, this message translates to:
+  /// **'Pessimo'**
+  String get ratingTerrible;
+
+  /// No description provided for @ratingPoor.
+  ///
+  /// In it, this message translates to:
+  /// **'Scarso'**
+  String get ratingPoor;
+
+  /// No description provided for @ratingOkay.
+  ///
+  /// In it, this message translates to:
+  /// **'Nella media'**
+  String get ratingOkay;
+
+  /// No description provided for @ratingGood.
+  ///
+  /// In it, this message translates to:
+  /// **'Buono'**
+  String get ratingGood;
+
+  /// No description provided for @ratingAmazing.
+  ///
+  /// In it, this message translates to:
+  /// **'Fantastico!'**
+  String get ratingAmazing;
+
+  /// No description provided for @skip.
+  ///
+  /// In it, this message translates to:
+  /// **'Salta'**
+  String get skip;
+
+  /// No description provided for @adherence.
+  ///
+  /// In it, this message translates to:
+  /// **'Aderenza'**
+  String get adherence;
+
+  /// No description provided for @completedSessions.
+  ///
+  /// In it, this message translates to:
+  /// **'Completate'**
+  String get completedSessions;
+
+  /// No description provided for @plannedSessions.
+  ///
+  /// In it, this message translates to:
+  /// **'Pianificate'**
+  String get plannedSessions;
+
+  /// No description provided for @activeWeeks.
+  ///
+  /// In it, this message translates to:
+  /// **'Settimane attive'**
+  String get activeWeeks;
+
+  /// No description provided for @warmup.
+  ///
+  /// In it, this message translates to:
+  /// **'Riscaldamento'**
+  String get warmup;
+
+  /// No description provided for @warmupComplete.
+  ///
+  /// In it, this message translates to:
+  /// **'Riscaldamento completato!'**
+  String get warmupComplete;
+
+  /// No description provided for @swapDay.
+  ///
+  /// In it, this message translates to:
+  /// **'Sposta giorno'**
+  String get swapDay;
+
+  /// No description provided for @editPlan.
+  ///
+  /// In it, this message translates to:
+  /// **'Modifica Scheda'**
+  String get editPlan;
+
+  /// No description provided for @rating.
+  ///
+  /// In it, this message translates to:
+  /// **'Valutazione'**
+  String get rating;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {
