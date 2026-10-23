@@ -355,4 +355,55 @@ class SEn extends S {
 
   @override
   String get noData => 'No data available';
+
+  @override
+  String get rateWorkout => 'How was the workout?';
+
+  @override
+  String get tapToRate => 'Tap a star to rate';
+
+  @override
+  String get ratingTerrible => 'Terrible';
+
+  @override
+  String get ratingPoor => 'Poor';
+
+  @override
+  String get ratingOkay => 'Okay';
+
+  @override
+  String get ratingGood => 'Good';
+
+  @override
+  String get ratingAmazing => 'Amazing!';
+
+  @override
+  String get skip => 'Skip';
+
+  @override
+  String get adherence => 'Adherence';
+
+  @override
+  String get completedSessions => 'Completed';
+
+  @override
+  String get plannedSessions => 'Planned';
+
+  @override
+  String get activeWeeks => 'Active weeks';
+
+  @override
+  String get warmup => 'Warmup';
+
+  @override
+  String get warmupComplete => 'Warmup complete!';
+
+  @override
+  String get swapDay => 'Swap day';
+
+  @override
+  String get editPlan => 'Edit Plan';
+
+  @override
+  String get rating => 'Rating';
 }

@@ -355,4 +355,55 @@ class SIt extends S {
 
   @override
   String get noData => 'Nessun dato disponibile';
+
+  @override
+  String get rateWorkout => 'Com\'e andato l\'allenamento?';
+
+  @override
+  String get tapToRate => 'Tocca una stella per votare';
+
+  @override
+  String get ratingTerrible => 'Pessimo';
+
+  @override
+  String get ratingPoor => 'Scarso';
+
+  @override
+  String get ratingOkay => 'Nella media';
+
+  @override
+  String get ratingGood => 'Buono';
+
+  @override
+  String get ratingAmazing => 'Fantastico!';
+
+  @override
+  String get skip => 'Salta';
+
+  @override
+  String get adherence => 'Aderenza';
+
+  @override
+  String get completedSessions => 'Completate';
+
+  @override
+  String get plannedSessions => 'Pianificate';
+
+  @override
+  String get activeWeeks => 'Settimane attive';
+
+  @override
+  String get warmup => 'Riscaldamento';
+
+  @override
+  String get warmupComplete => 'Riscaldamento completato!';
+
+  @override
+  String get swapDay => 'Sposta giorno';
+
+  @override
+  String get editPlan => 'Modifica Scheda';
+
+  @override
+  String get rating => 'Valutazione';
 }
