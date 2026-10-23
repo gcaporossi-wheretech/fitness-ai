@@ -31,20 +31,46 @@
 
   <title>FitnessAI</title>
   <link rel="manifest" href="manifest.json">
+  <!-- CanvasKit is fetched from gstatic: open the connection early -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <!-- WebAuthn (Face ID / passkey) helper -->
   <script src="webauthn.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0D0D0D; }
+    #splash {
+      position: fixed; inset: 0; display: flex;
+      align-items: center; justify-content: center; background: #0D0D0D;
+    }
+    #splash div {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 4px solid #1E1E3A; border-top-color: #4F8CFF;
+      animation: splash-spin 0.9s linear infinite;
+    }
+    @keyframes splash-spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
+  <!-- Shown while the Flutter bundle downloads; removed on the first frame -->
+  <div id="splash"><div></div></div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var s = document.getElementById('splash');
+      if (s) s.remove();
+    });
+  </script>
   <!--
     Self-heal for iOS/Safari installed PWAs: when a new service worker takes
     control after a deploy, reload once so the page never gets stuck on a stale
     cached shell (the classic white screen after an update).
+    Only on updates: on the very first visit there is no previous controller,
+    so reloading would just download everything twice.
   -->
   <script>
     if ('serviceWorker' in navigator) {
       var __reloaded = false;
+      var __hadController = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.addEventListener('controllerchange', function () {
-        if (__reloaded) return;
+        if (__reloaded || !__hadController) return;
         __reloaded = true;
         window.location.reload();
       });

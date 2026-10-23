@@ -79,12 +79,19 @@ class _MainShellState extends State<MainShell> {
 }
 
 /// GoRouter configuration with auth redirect.
+/// The router is created once; auth changes only re-run the redirect via
+/// [refreshListenable] instead of rebuilding the whole navigation tree.
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authNotifierProvider);
+  final authRefresh = ValueNotifier<AuthState>(ref.read(authNotifierProvider));
+  ref.listen<AuthState>(authNotifierProvider, (_, next) {
+    authRefresh.value = next;
+  });
 
-  return GoRouter(
+  final router = GoRouter(
     initialLocation: '/workout',
+    refreshListenable: authRefresh,
     redirect: (context, state) {
+      final authState = authRefresh.value;
       final isAuthenticated = authState is AuthAuthenticated;
       final isLoading = authState is AuthInitial || authState is AuthLoading;
       final isAuthRoute = state.matchedLocation == '/login' ||
@@ -142,4 +149,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  ref.onDispose(() {
+    router.dispose();
+    authRefresh.dispose();
+  });
+  return router;
 });

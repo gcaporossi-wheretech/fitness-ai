@@ -30,7 +30,16 @@ services:
       - "traefik.http.routers.auth.entrypoints=websecure"
       - "traefik.http.routers.auth.tls=true"
       - "traefik.http.routers.auth.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.auth.middlewares=security-headers@file,rate-limit-auth@file"
+      - "traefik.http.routers.auth.middlewares=security-headers@file,rate-limit-global@file"
+      - "traefik.http.routers.auth.service=auth"
+      # Strict rate limit only on credential endpoints: /auth/me and /auth/refresh
+      # run on every app start and must not hit the 5/min login limit
+      - "traefik.http.routers.auth-login.rule=(Host(`${DOMAIN:-fitnessai.app}`) || Host(`54-170-27-110.sslip.io`)) && (Path(`/auth/login`) || Path(`/auth/register`) || Path(`/auth/webauthn/login`))"
+      - "traefik.http.routers.auth-login.entrypoints=websecure"
+      - "traefik.http.routers.auth-login.tls=true"
+      - "traefik.http.routers.auth-login.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.auth-login.middlewares=security-headers@file,rate-limit-auth@file"
+      - "traefik.http.routers.auth-login.service=auth"
       - "traefik.http.services.auth.loadbalancer.server.port=8001"
 
   workouts:
@@ -96,7 +105,8 @@ services:
       - "traefik.http.routers.pwa.entrypoints=websecure"
       - "traefik.http.routers.pwa.tls=true"
       - "traefik.http.routers.pwa.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.pwa.priority=1"
+      # Above the Next.js "web" router (same Host rule, priority 1): the PWA owns /
+      - "traefik.http.routers.pwa.priority=2"
       - "traefik.http.services.pwa.loadbalancer.server.port=80"
     networks:
       - fitnessai

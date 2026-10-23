@@ -70,3 +70,7 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+
+  # Inter bundled (Latin subset) so google_fonts doesn't fetch it at runtime
+  assets:
+    - assets/google_fonts/
